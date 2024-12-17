@@ -1,0 +1,21 @@
+# macOS system files
+.DS_Store
+
+# User configuration
+config/default.yml
+config/custom*.yml
+config/*.local.yml
+
+# Update cache and local files
+.zapz_update_check
+.zapz_cache/
+
+# Test artifacts
+/tmp/
+/test/tmp/
+
+# Editor files
+.idea/
+.vscode/
+*.swp
+*~ 

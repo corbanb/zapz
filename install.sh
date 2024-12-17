@@ -66,6 +66,11 @@ check_dependencies
 # Create installation directory
 mkdir -p "$INSTALL_DIR"
 
+# Copy example config if default doesn't exist
+if [[ ! -f "$INSTALL_DIR/config/default.yml" ]]; then
+    cp "$INSTALL_DIR/config/default.yml.example" "$INSTALL_DIR/config/default.yml"
+fi
+
 # Clone repository
 if [[ "${MOCK_INSTALL:-false}" == "true" ]]; then
     print_info "Running in test mode..."
