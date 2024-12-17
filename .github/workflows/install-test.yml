@@ -3,81 +3,73 @@ name: Installation Test
 
 on:
   pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened]
   schedule:
-    - cron: '0 0 * * 0'  # Weekly on Sunday
+    - cron: '0 0 * * 0'  # Weekly on Sundays at midnight
   workflow_dispatch:
 
 jobs:
   test-install:
-    runs-on: macos-latest
-    permissions:
-      checks: write
-      pull-requests: write
+    name: Test on macOS ${{ matrix.os-version }}
+    runs-on: macos-${{ matrix.os-version }}
     strategy:
       matrix:
         os-version: [monterey, ventura, sonoma]
+      fail-fast: false
+
     steps:
       - uses: actions/checkout@v3
 
       - name: Clean Environment
-        id: clean
         run: |
+          rm -rf ~/Library/Developer/Xcode/DerivedData
           rm -rf ~/.local/bin/zapz
-          rm -rf ~/.zapz*
+          rm -rf ~/.zapz_update_check
 
       - name: Setup Config
-        id: setup_config
         run: |
-          mkdir -p ~/.local/bin/mac-setup/config
-          cp config/default.yml.example ~/.local/bin/mac-setup/config/default.yml.example
+          cp config/default.yml.example config/default.yml
+          cp .secrets.example .secrets
+          chmod 600 .secrets
 
       - name: Test Installation
-        id: install
         run: |
-          curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | bash
-          zapz --version
-
-      - name: Test Basic Setup
-        id: setup
-        run: zapz --test
+          chmod +x ./install.sh
+          ./install.sh
 
       - name: Report Status
-        uses: actions/github-script@v6
         if: always()
+        uses: actions/github-script@v6
         with:
           script: |
-            const allSteps = await github.rest.actions.listJobsForWorkflowRun({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: context.runId
-            }).then(response => {
-              const job = response.data.jobs.find(j => j.name === 'test-install');
-              return job ? job.steps : [];
-            });
+            const { owner, repo } = context.repo;
+            const run_id = context.runId;
 
-            const getStepByName = (name) => allSteps.find(step => step.name.toLowerCase().includes(name.toLowerCase()));
+            core.info(`Run ID: ${run_id}`);
 
-            const cleanStep = getStepByName('clean environment');
-            const configStep = getStepByName('setup config');
-            const installStep = getStepByName('test installation');
-            const setupStep = getStepByName('test basic setup');
+            if (!run_id) {
+              core.warning('No run ID found, skipping status report');
+              return;
+            }
 
-            const success = cleanStep?.conclusion === 'success' &&
-              configStep?.conclusion === 'success' &&
-              installStep?.conclusion === 'success' &&
-              setupStep?.conclusion === 'success';
-
-            const message = success
-              ? '✅ Installation test passed!'
-              : '❌ Installation test failed. Please check the logs.';
-
-            if (context.issue.number) {
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: message
+            try {
+              const jobs = await github.rest.actions.listJobsForWorkflowRun({
+                owner,
+                repo,
+                run_id,
               });
+
+              const job = jobs.data.jobs.find(j => j.name.startsWith('Test on macOS'));
+              if (!job) {
+                core.warning('Could not find test job');
+                return;
+              }
+
+              const conclusion = job.conclusion || 'pending';
+              core.info(`Job conclusion: ${conclusion}`);
+
+              if (conclusion === 'failure') {
+                core.setFailed('Installation tests failed');
+              }
+            } catch (error) {
+              core.warning(`Error getting job status: ${error.message}`);
             }

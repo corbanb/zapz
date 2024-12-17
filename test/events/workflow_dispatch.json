@@ -1,0 +1,10 @@
+{
+  "inputs": {},
+  "ref": "refs/heads/main",
+  "repository": {
+    "name": "macos-developer-setup",
+    "full_name": "user/macos-developer-setup",
+    "private": false,
+    "html_url": "https://github.com/user/macos-developer-setup"
+  }
+}

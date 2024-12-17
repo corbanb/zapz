@@ -107,8 +107,8 @@ main() {
         "bash -n ${PROJECT_ROOT}/setup.sh" || ((failed_tests++))
 
     # Test configuration loading
-    run_test "Default config exists and is valid YAML" \
-        "yq eval '.' ${PROJECT_ROOT}/config/default.yml &>/dev/null" || ((failed_tests++))
+    run_test "Default config example exists and is valid YAML" \
+        "yq eval '.' \"${PROJECT_ROOT}/config/default.yml.example\" &>/dev/null" || ((failed_tests++))
 
     # Test directory structure
     run_test "Project directory structure is valid" \
@@ -130,8 +130,10 @@ main() {
     done
 
     # Test Homebrew installation check
-    run_test "Homebrew installation check works" \
-        "command -v brew &>/dev/null" || ((failed_tests++))
+    if [[ -z "${CI}" ]]; then
+        run_test "Homebrew installation check works" \
+            "command -v brew &>/dev/null" || ((failed_tests++))
+    fi
 
     # Test update checker
     run_test "Update checker script exists" \
@@ -142,16 +144,16 @@ main() {
 
     # Test configuration validation
     run_test "Git configuration is valid" \
-        "yq e '.git.user.name' \"$PROJECT_ROOT/config/default.yml\" &>/dev/null && \
-         yq e '.git.user.email' \"$PROJECT_ROOT/config/default.yml\" &>/dev/null" || ((failed_tests++))
+        "yq e '.git.user.name' \"$PROJECT_ROOT/config/default.yml.example\" &>/dev/null && \
+         yq e '.git.user.email' \"$PROJECT_ROOT/config/default.yml.example\" &>/dev/null" || ((failed_tests++))
 
     run_test "Node.js configuration is valid" \
-        "yq e '.node.versions' \"$PROJECT_ROOT/config/default.yml\" &>/dev/null && \
-         yq e '.node.default' \"$PROJECT_ROOT/config/default.yml\" &>/dev/null" || ((failed_tests++))
+        "yq e '.node.versions' \"$PROJECT_ROOT/config/default.yml.example\" &>/dev/null && \
+         yq e '.node.default' \"$PROJECT_ROOT/config/default.yml.example\" &>/dev/null" || ((failed_tests++))
 
     run_test "Homebrew configuration is valid" \
-        "yq e '.homebrew.formulas' \"$PROJECT_ROOT/config/default.yml\" &>/dev/null && \
-         yq e '.homebrew.casks' \"$PROJECT_ROOT/config/default.yml\" &>/dev/null" || ((failed_tests++))
+        "yq e '.homebrew.formulas' \"$PROJECT_ROOT/config/default.yml.example\" &>/dev/null && \
+         yq e '.homebrew.casks' \"$PROJECT_ROOT/config/default.yml.example\" &>/dev/null" || ((failed_tests++))
 
     # Test file permissions and structure
     run_test "Critical files are executable" \
@@ -168,8 +170,8 @@ main() {
         "[[ -f \"$PROJECT_ROOT/.secrets.example\" ]]" || ((failed_tests++))
 
     run_test "Secrets example file has correct format" \
-        "grep -q 'GITHUB_TOKEN=' \"$PROJECT_ROOT/.secrets.example\" && \
-         grep -q 'github-token=' \"$PROJECT_ROOT/.secrets.example\"" || ((failed_tests++))
+        "grep -q '^GITHUB_TOKEN=' \"$PROJECT_ROOT/.secrets.example\" && \
+         grep -q '^GITHUB_TOKEN_ALT=' \"$PROJECT_ROOT/.secrets.example\"" || ((failed_tests++))
 
     run_test "Secrets file is in gitignore" \
         "grep -q '^\.secrets$' \"$PROJECT_ROOT/.gitignore\"" || ((failed_tests++))

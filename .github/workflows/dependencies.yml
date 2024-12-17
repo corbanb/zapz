@@ -3,23 +3,67 @@ name: Update Dependencies
 
 on:
   schedule:
-    - cron: '0 0 * * 1'  # Weekly on Monday
+    - cron: '0 0 * * 0'  # Weekly on Sundays at midnight
   workflow_dispatch:
 
 jobs:
   update-deps:
     runs-on: macos-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
     steps:
       - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check Homebrew Updates
+        id: brew-check
+        if: ${{ !env.ACT }}  # Skip in act environment
         run: |
+          # Update Homebrew
           brew update
-          brew outdated
 
-      - name: Create PR if Updates Available
+          # Get list of outdated packages
+          OUTDATED=$(brew outdated)
+          if [[ -n "$OUTDATED" ]]; then
+            echo "updates_available=true" >> $GITHUB_OUTPUT
+            echo "outdated_packages<<EOF" >> $GITHUB_OUTPUT
+            echo "$OUTDATED" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+
+            # Update the packages in config
+            FORMULAS=$(echo "$OUTDATED" | cut -d' ' -f1 | tr '\n' ' ')
+            echo "Found outdated formulas: $FORMULAS"
+
+            # Update default.yml with new versions
+            for formula in $FORMULAS; do
+              if grep -q "\"$formula\"" config/default.yml; then
+                echo "Updating $formula in config..."
+                NEW_VERSION=$(brew info "$formula" | head -n1 | cut -d' ' -f3)
+                sed -i '' "s/\"$formula\"/\"$formula@$NEW_VERSION\"/" config/default.yml
+              fi
+            done
+          else
+            echo "updates_available=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.brew-check.outputs.updates_available == 'true' && !env.ACT
         uses: peter-evans/create-pull-request@v5
         with:
-          title: 'chore: update homebrew dependencies'
-          body: 'Updates available for homebrew packages'
-          branch: 'chore/update-dependencies'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(deps): update Homebrew dependencies"
+          title: "chore(deps): update Homebrew dependencies"
+          body: |
+            This PR updates the following Homebrew packages:
+
+            ```
+            ${{ steps.brew-check.outputs.outdated_packages }}
+            ```
+
+            This is an automated PR created by the dependency update workflow.
+          branch: deps/homebrew-updates
+          delete-branch: true
+          labels: dependencies

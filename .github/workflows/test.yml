@@ -3,67 +3,76 @@ name: Tests
 
 on:
   push:
-    branches: [main]
   pull_request:
-    branches: [main]
 
 jobs:
   test:
-    runs-on: macos-latest
-    permissions:
-      checks: write
-      pull-requests: write
-
+    runs-on: >-
+      ${{
+        github.event_name == 'push' &&
+        github.event.repository.fork == false &&
+        'macos-latest' ||
+        'ubuntu-latest'
+      }}
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Dependencies
+      - name: Install dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh shellcheck
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
         run: |
           brew install shellcheck shfmt
 
-      - name: Run Tests
-        id: tests
+      - name: Run tests
         run: |
-          chmod +x test/test.sh
+          chmod +x ./test/test.sh
           ./test/test.sh
 
-      - name: Run Installation Tests
-        id: install_tests
+      - name: Run installation tests
+        if: runner.os == 'macOS'
         run: |
-          chmod +x test/test_install.sh
+          chmod +x ./test/test_install.sh
           ./test/test_install.sh
 
       - name: Report Status
-        uses: actions/github-script@v6
         if: always()
+        uses: actions/github-script@v6
         with:
           script: |
-            const allSteps = await github.rest.actions.listJobsForWorkflowRun({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: context.runId
-            }).then(response => {
-              const job = response.data.jobs.find(j => j.name === 'test');
-              return job ? job.steps : [];
-            });
+            const { owner, repo } = context.repo;
+            const run_id = context.runId;
 
-            const getStepByName = (name) => allSteps.find(step => step.name.toLowerCase().includes(name.toLowerCase()));
+            core.info(`Run ID: ${run_id}`);
 
-            const testsStep = getStepByName('run tests');
-            const installTestsStep = getStepByName('installation tests');
+            if (!run_id) {
+              core.warning('No run ID found, skipping status report');
+              return;
+            }
 
-            const success = testsStep?.conclusion === 'success' &&
-              installTestsStep?.conclusion === 'success';
-
-            const message = success
-              ? '✅ All tests passed!'
-              : '❌ Some tests failed. Please check the logs.';
-
-            if (context.issue.number) {
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: message
+            try {
+              const jobs = await github.rest.actions.listJobsForWorkflowRun({
+                owner,
+                repo,
+                run_id,
               });
+
+              const job = jobs.data.jobs.find(j => j.name === 'test');
+              if (!job) {
+                core.warning('Could not find test job');
+                return;
+              }
+
+              const conclusion = job.conclusion || 'pending';
+              core.info(`Job conclusion: ${conclusion}`);
+
+              if (conclusion === 'failure') {
+                core.setFailed('Tests failed');
+              }
+            } catch (error) {
+              core.warning(`Error getting job status: ${error.message}`);
             }

@@ -1,25 +1,27 @@
+---
 # Site settings
-title: zapz
-description: The zero-dependency macOS development environment setup tool
-url: "https://corbanb.github.io/zapz"
-baseurl: "/zapz"
+title: macOS Developer Setup
+description: A powerful CLI tool for setting up macOS development environments
+baseurl: "/macos-developer-setup"
+url: ""
 
-# Theme settings
-remote_theme: pages-themes/cayman@v0.2.0
-plugins:
-  - jekyll-remote-theme
-  - jekyll-seo-tag
+# Build settings
+markdown: kramdown
+theme: jekyll-theme-cayman
 
 # Navigation
 nav_links:
   - title: Documentation
-    url: /docs
-  - title: GitHub
-    url: https://github.com/corbanb/zapz
+    url: /documentation
+  - title: Configuration
+    url: /configuration
+  - title: Examples
+    url: /examples
+  - title: CLI
+    url: /cli
+  - title: Integrations
+    url: /integrations
 
-# GitHub metadata
-github:
-  is_project_page: true
-  repository_url: https://github.com/corbanb/zapz
-  owner_name: corbanb
-  repository_name: zapz 
+# Footer
+footer:
+  copyright: "© 2024 macOS Developer Setup"
