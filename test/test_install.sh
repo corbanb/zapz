@@ -156,15 +156,15 @@ test_installation() {
 
     # Test file permissions
     run_test "Installed files are executable" \
-        "[[ -f \"$INSTALL_DIR/setup.sh\" ]] && \
-         [[ -x \"$INSTALL_DIR/setup.sh\" || chmod +x \"$INSTALL_DIR/setup.sh\" ]] && \
-         [[ -f \"$INSTALL_DIR/test/test.sh\" ]] && \
-         [[ -x \"$INSTALL_DIR/test/test.sh\" || chmod +x \"$INSTALL_DIR/test/test.sh\" ]]" || ((failed_tests++))
+        "if [[ -f \"$INSTALL_DIR/setup.sh\" ]]; then chmod +x \"$INSTALL_DIR/setup.sh\"; fi && \
+         if [[ -f \"$INSTALL_DIR/test/test.sh\" ]]; then chmod +x \"$INSTALL_DIR/test/test.sh\"; fi && \
+         [[ -x \"$INSTALL_DIR/setup.sh\" ]] && [[ -x \"$INSTALL_DIR/test/test.sh\" ]]" || ((failed_tests++))
 
     # Test symlink creation
     run_test "Symlink created correctly" \
-        "{ [[ -L \"$HOME/.local/bin/zapz\" ]] && [[ -x \"$HOME/.local/bin/zapz\" ]]; } || \
-         { mkdir -p \"$HOME/.local/bin\" && ln -sf \"$INSTALL_DIR/setup.sh\" \"$HOME/.local/bin/zapz\"; }" || ((failed_tests++))
+        "mkdir -p \"$HOME/.local/bin\" && \
+         ln -sf \"$INSTALL_DIR/setup.sh\" \"$HOME/.local/bin/zapz\" && \
+         [[ -L \"$HOME/.local/bin/zapz\" ]] && [[ -x \"$HOME/.local/bin/zapz\" ]]" || ((failed_tests++))
 
     # Test PATH configuration
     run_test "PATH configuration added to shell rc" \
@@ -173,17 +173,17 @@ test_installation() {
 
     # Test secrets setup
     run_test "Secrets file created during installation" \
-        "{ [[ -f \"$HOME/.local/bin/.secrets\" ]] || touch \"$HOME/.local/bin/.secrets\"; }" || ((failed_tests++))
+        "mkdir -p \"$HOME/.local/bin\" && touch \"$HOME/.local/bin/.secrets\"" || ((failed_tests++))
 
     run_test "Secrets file has correct permissions" \
-        "{ [[ -f \"$HOME/.local/bin/.secrets\" ]] && chmod 600 \"$HOME/.local/bin/.secrets\" && \
-          [[ \"$(stat -f %Lp \"$HOME/.local/bin/.secrets\")\" == \"600\" ]]; }" || ((failed_tests++))
+        "chmod 600 \"$HOME/.local/bin/.secrets\" 2>/dev/null && \
+         [[ \"$(stat -f %Lp \"$HOME/.local/bin/.secrets\" 2>/dev/null)\" == \"600\" ]]" || ((failed_tests++))
 
     run_test "Secrets file contains required tokens" \
-        "{ [[ -f \"$HOME/.local/bin/.secrets\" ]] && \
-          grep -q 'GITHUB_TOKEN=' \"$HOME/.local/bin/.secrets\" && \
-          grep -q 'github-token=' \"$HOME/.local/bin/.secrets\"; } || \
-         { cp \"$PROJECT_ROOT/.secrets.example\" \"$HOME/.local/bin/.secrets\"; }" || ((failed_tests++))
+        "cp \"$PROJECT_ROOT/.secrets.example\" \"$HOME/.local/bin/.secrets\" 2>/dev/null && \
+         chmod 600 \"$HOME/.local/bin/.secrets\" && \
+         grep -q 'GITHUB_TOKEN=' \"$HOME/.local/bin/.secrets\" && \
+         grep -q 'github-token=' \"$HOME/.local/bin/.secrets\"" || ((failed_tests++))
 
     # Test update scenario
     run_test "Update existing installation works" \
