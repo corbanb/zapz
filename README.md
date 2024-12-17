@@ -410,6 +410,12 @@ cp config/default.yml.example config/default.yml
 
 # Create necessary directories
 mkdir -p config
+
+# Create secrets file (required for GitHub Actions)
+cat > .secrets << EOL
+GITHUB_TOKEN=fake-token
+github-token=fake-token
+EOL
 ```
 
 #### Running Individual Workflows
@@ -417,19 +423,22 @@ mkdir -p config
 1. Lint Workflow (Ubuntu-compatible):
 ```bash
 act -j lint -W .github/workflows/lint.yml \
-  -P ubuntu-latest=catthehacker/ubuntu:act-latest
+  -P ubuntu-latest=catthehacker/ubuntu:act-latest \
+  --secret-file .secrets
 ```
 
 2. Documentation Sync (Ubuntu-compatible):
 ```bash
 act -j sync-docs -W .github/workflows/docs-sync.yml \
-  -P ubuntu-latest=catthehacker/ubuntu:act-latest
+  -P ubuntu-latest=catthehacker/ubuntu:act-latest \
+  --secret-file .secrets
 ```
 
 3. GitHub Pages (Ubuntu-compatible):
 ```bash
 act -j build -W .github/workflows/pages.yml \
-  -P ubuntu-latest=catthehacker/ubuntu:act-latest
+  -P ubuntu-latest=catthehacker/ubuntu:act-latest \
+  --secret-file .secrets
 ```
 
 #### Workflows with Limited Local Support
@@ -576,3 +585,38 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 <div align="center">
 Made with ❤️ by @corbanb
 </div>
+
+#### Setting Up Secrets
+
+For running GitHub Actions locally with `act`, you'll need to set up a secrets file:
+
+1. During installation, a `.secrets` file is created at `~/.local/bin/.secrets`
+2. Edit this file with your GitHub token:
+```bash
+# Open secrets file in your editor
+code ~/.local/bin/.secrets  # or vim, nano, etc.
+```
+
+3. Add your GitHub Personal Access Token:
+```bash
+# Get your token from: https://github.com/settings/tokens
+# Required permissions:
+# - repo (Full control of private repositories)
+# - workflow (Update GitHub Action workflows)
+GITHUB_TOKEN=your-github-token-here
+github-token=your-github-token-here
+```
+
+4. Secure the file permissions:
+```bash
+chmod 600 ~/.local/bin/.secrets
+```
+
+The secrets file is automatically used when running workflows:
+```bash
+# No need to specify --secret-file, it's handled automatically
+act -j lint -W .github/workflows/lint.yml \
+  -P ubuntu-latest=catthehacker/ubuntu:act-latest
+```
+
+Note: The `.secrets` file is gitignored by default to prevent accidental commits of sensitive information.

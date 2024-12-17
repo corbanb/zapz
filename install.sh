@@ -21,31 +21,31 @@ print_error() { printf "${RED}ERROR: %s${NC}\n" "$1" >&2; }
 # Check and install dependencies
 check_dependencies() {
     local missing_deps=()
-    
+
     # Required dependencies
     local deps=(
         "yq:YAML processor for configuration"
     )
-    
+
     print_info "Checking dependencies..."
-    
+
     for dep in "${deps[@]}"; do
         local name="${dep%%:*}"
         local description="${dep#*:}"
-        
+
         if ! command -v "$name" >/dev/null 2>&1; then
             missing_deps+=("$name")
             print_info "Missing $name ($description)"
         fi
     done
-    
+
     if ((${#missing_deps[@]} > 0)); then
         if ! command -v brew >/dev/null 2>&1; then
             print_error "Homebrew is required to install dependencies"
             print_info "Install Homebrew first: https://brew.sh"
             exit 1
         fi
-        
+
         print_info "Installing missing dependencies..."
         for dep in "${missing_deps[@]}"; do
             print_info "Installing $dep..."
@@ -69,6 +69,14 @@ mkdir -p "$INSTALL_DIR"
 # Copy example config if default doesn't exist
 if [[ ! -f "$INSTALL_DIR/config/default.yml" ]]; then
     cp "$INSTALL_DIR/config/default.yml.example" "$INSTALL_DIR/config/default.yml"
+fi
+
+# Copy example secrets if .secrets doesn't exist
+if [[ ! -f "$HOME/.local/bin/.secrets" ]]; then
+    cp "$INSTALL_DIR/.secrets.example" "$HOME/.local/bin/.secrets"
+    chmod 600 "$HOME/.local/bin/.secrets"  # Secure file permissions
+    print_info "Created .secrets file at $HOME/.local/bin/.secrets"
+    print_info "Please update it with your GitHub token"
 fi
 
 # Clone repository
@@ -104,9 +112,9 @@ if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
     SHELL_RC="$HOME/.zshrc"
     touch "$SHELL_RC"  # Ensure file exists
     [[ "$SHELL" == */bash ]] && SHELL_RC="$HOME/.bashrc"
-    
+
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_RC"
-    
+
     # Add update check to shell RC
     cat >> "$SHELL_RC" << 'EOF'
 
@@ -115,10 +123,10 @@ if [[ -f "$HOME/.local/bin/mac-setup/lib/check_update.sh" ]]; then
     source "$HOME/.local/bin/mac-setup/lib/check_update.sh"
 fi
 EOF
-    
+
     print_info "Added ~/.local/bin to PATH in $SHELL_RC"
 fi
 
 print_success "Installation complete!"
 print_info "Run 'zapz --help' to get started"
-print_info "Source your shell config or restart your terminal to use the 'zapz' command" 
+print_info "Source your shell config or restart your terminal to use the 'zapz' command"

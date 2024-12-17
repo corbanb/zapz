@@ -6,6 +6,10 @@ config/default.yml
 config/custom*.yml
 config/*.local.yml
 
+# Secrets and tokens
+.secrets
+*.env
+
 # Update cache and local files
 .zapz_update_check
 .zapz_cache/
@@ -18,7 +22,7 @@ config/*.local.yml
 .idea/
 .vscode/
 *.swp
-*~ 
+*~
 
 # Internal documentation
 .docs/
