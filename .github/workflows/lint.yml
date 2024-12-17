@@ -64,8 +64,70 @@ jobs:
               const conclusion = job.conclusion || 'pending';
               core.info(`Job conclusion: ${conclusion}`);
 
+              // Get step information
+              const steps = job.steps || [];
+              const failedSteps = steps.filter(step => step.conclusion === 'failure');
+
+              // Create detailed comment
+              let comment = `## Code Quality Results\n\n`;
+
+              if (conclusion === 'success') {
+                comment += '✅ All code quality checks passed!\n\n';
+              } else if (conclusion === 'failure') {
+                comment += '❌ Some code quality checks failed.\n\n';
+
+                if (failedSteps.length > 0) {
+                  comment += '### Failed Checks\n';
+                  failedSteps.forEach(step => {
+                    comment += `- ${step.name}\n`;
+                    if (step.log) {
+                      comment += '```\n' + step.log + '\n```\n';
+                    }
+                  });
+                }
+              }
+
+              // Add check details
+              comment += '\n### Quality Checks Run\n';
+              comment += '- ShellCheck (shell script analysis)\n';
+              comment += '- YAML Lint (YAML file validation)\n';
+              comment += '- Script Formatting\n';
+
+              // Add system information
+              comment += '\n### Environment Details\n';
+              comment += `- OS: ${process.env.RUNNER_OS}\n`;
+              comment += `- Runner: ${process.env.RUNNER_NAME}\n`;
+              comment += `- Workflow: ${context.workflow}\n`;
+
+              // Add fix instructions
+              comment += '\n### How to Fix\n';
+              comment += '1. Run checks locally:\n';
+              comment += '```bash\n';
+              comment += '# Check shell scripts\n';
+              comment += 'shellcheck setup.sh lib/**/*.sh test/*.sh\n\n';
+              comment += '# Check YAML files\n';
+              comment += 'yamllint .github/workflows/ config/\n';
+              comment += '```\n';
+
+              // Add helpful links
+              comment += '\n### Helpful Links\n';
+              comment += `- [Lint Logs](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${run_id})\n`;
+              comment += `- [Code Style Guide](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/blob/main/docs/code-style.md)\n`;
+              comment += '- [ShellCheck Documentation](https://www.shellcheck.net/)\n';
+              comment += '- [YAML Lint Rules](https://yamllint.readthedocs.io/en/stable/rules.html)\n';
+
+              // Post comment if this is a PR
+              if (context.payload.pull_request) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: context.payload.pull_request.number,
+                  body: comment
+                });
+              }
+
               if (conclusion === 'failure') {
-                core.setFailed('Lint checks failed');
+                core.setFailed('Code quality checks failed. See detailed report in PR comment.');
               }
             } catch (error) {
               core.warning(`Error getting job status: ${error.message}`);

@@ -67,8 +67,62 @@ jobs:
               const conclusion = job.conclusion || 'pending';
               core.info(`Job conclusion: ${conclusion}`);
 
+              // Get step information
+              const steps = job.steps || [];
+              const failedSteps = steps.filter(step => step.conclusion === 'failure');
+
+              // Create detailed comment
+              let comment = `## Installation Test Results\n\n`;
+
+              if (conclusion === 'success') {
+                comment += '✅ Installation completed successfully!\n\n';
+              } else if (conclusion === 'failure') {
+                comment += '❌ Installation failed.\n\n';
+
+                if (failedSteps.length > 0) {
+                  comment += '### Failed Steps\n';
+                  failedSteps.forEach(step => {
+                    comment += `- ${step.name}\n`;
+                    if (step.log) {
+                      comment += '```\n' + step.log + '\n```\n';
+                    }
+                  });
+                }
+              }
+
+              // Add test matrix information
+              comment += '\n### Test Matrix\n';
+              comment += `- macOS Version: ${process.env.MATRIX_OS_VERSION}\n`;
+
+              // Add system information
+              comment += '\n### Environment Details\n';
+              comment += `- OS: ${process.env.RUNNER_OS}\n`;
+              comment += `- Runner: ${process.env.RUNNER_NAME}\n`;
+              comment += `- Workflow: ${context.workflow}\n`;
+
+              // Add troubleshooting section
+              comment += '\n### Troubleshooting\n';
+              comment += '1. Check the [installation documentation](docs/documentation.md)\n';
+              comment += '2. Verify system requirements in [README.md](README.md)\n';
+              comment += '3. Review [common issues](docs/troubleshooting.md)\n';
+
+              // Add helpful links
+              comment += '\n### Helpful Links\n';
+              comment += `- [Installation Logs](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${run_id})\n`;
+              comment += `- [Configuration Guide](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/blob/main/docs/configuration.md)\n`;
+
+              // Post comment if this is a PR
+              if (context.payload.pull_request) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: context.payload.pull_request.number,
+                  body: comment
+                });
+              }
+
               if (conclusion === 'failure') {
-                core.setFailed('Installation tests failed');
+                core.setFailed('Installation tests failed. See detailed report in PR comment.');
               }
             } catch (error) {
               core.warning(`Error getting job status: ${error.message}`);
