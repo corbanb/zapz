@@ -383,6 +383,51 @@ To add new tests:
     ```
 3. Run the test suite to verify
 
+### Running GitHub Actions Locally
+
+You can test GitHub Actions workflows locally before pushing using [act](https://github.com/nektos/act). This helps catch issues early in your development cycle.
+
+1. Install `act`:
+```bash
+brew install act
+```
+
+2. Run specific workflows:
+```bash
+# Run all workflows
+act
+
+# Run a specific workflow
+act -W .github/workflows/test.yml
+
+# Run a specific job from a workflow
+act -j test -W .github/workflows/test.yml
+
+# Run workflow with specific event
+act pull_request
+
+# List all available actions
+act -l
+```
+
+3. Common workflow commands:
+```bash
+# Test the lint workflow
+act -j lint -W .github/workflows/lint.yml
+
+# Test the installation workflow
+act -j test-install -W .github/workflows/install-test.yml
+
+# Test the release workflow (dry-run)
+act -n -j release -W .github/workflows/release.yml
+```
+
+Note: Some actions might require secrets or specific GitHub environment variables. You can provide these using a `.secrets` file or the `-s` flag:
+
+```bash
+act -s GITHUB_TOKEN=your_token
+```
+
 ## 🔍 Troubleshooting
 
 <details>
