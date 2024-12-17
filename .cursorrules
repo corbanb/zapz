@@ -67,4 +67,4 @@ Follow these rules when writing Bash scripts:
 - Include **verbose logging** flags (`-v`) and an option for silent execution (`-q`).
 - Provide versioning in the script header (e.g., `v1.0.0`).
 - Test the script thoroughly in fresh macOS environments to ensure compatibility.
-
+- Please also respond with a git commit message for the changes you made to the project each time
