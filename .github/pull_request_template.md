@@ -1,49 +1,30 @@
 ## Description
-<!-- Describe your changes -->
+<!-- Brief description of your changes -->
+
+## Type of Change
+- [ ] 🚀 New feature
+- [ ] 🐛 Bug fix
+- [ ] 📝 Documentation
+- [ ] 🔧 Configuration
+- [ ] ⚡️ Performance
+- [ ] 🧪 Tests
 
 ## Checklist
-- [ ] I have tested these changes locally
-- [ ] I have updated documentation as needed
-- [ ] All tests pass (`./test/test.sh`)
-- [ ] Lint checks pass (`npm run lint`)
-- [ ] I have added tests that prove my fix/feature works
-- [ ] Installation tests pass (`./test/test_install.sh`)
-- [ ] ShellCheck passes on all shell scripts
-- [ ] YAML files pass yamllint checks
-
-## Status Checks
-The following checks must pass before merging:
-- Code Quality (lint)
-  - ShellCheck
-  - YAML Lint
-  - Script Formatting
-- Tests
-  - Core functionality tests
-  - Installation tests
-  - macOS compatibility tests
-- Installation Test
-  - Clean install test
-  - Update test
-- Documentation Build
-  - Jekyll build
-  - GitHub Pages deployment
-
-## Screenshots
-<!-- If applicable, add screenshots to help explain your changes -->
+- [ ] I have tested these changes on macOS
+- [ ] All tests pass (`./test/run_tests.sh`)
+- [ ] ShellCheck passes on shell scripts
+- [ ] YAML files pass linting
+- [ ] Documentation is updated (if needed)
 
 ## Testing Steps
 ```bash
-# Run core tests
-chmod +x test/test.sh
-./test/test.sh
+# Run all tests
+./test/run_tests.sh
 
-# Run installation tests
-chmod +x test/test_install.sh
-./test/test_install.sh
-
-# Check shell scripts
-shellcheck setup.sh lib/**/*.sh test/*.sh
-
-# Check YAML files
-yamllint .github/workflows/ config/
+# Test specific components (if applicable):
+./test/test.sh         # Core tests
+./test/test_install.sh # Installation tests
 ```
+
+## Screenshots
+<!-- If applicable, add screenshots -->
