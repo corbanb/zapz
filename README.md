@@ -387,45 +387,141 @@ To add new tests:
 
 You can test GitHub Actions workflows locally before pushing using [act](https://github.com/nektos/act). This helps catch issues early in your development cycle.
 
-1. Install `act`:
+#### Prerequisites
+
+1. Install `act` and Docker:
 ```bash
+# Install act
 brew install act
+
+# Install Docker Desktop
+brew install --cask docker
 ```
 
-2. Run specific workflows:
+2. Start Docker Desktop:
+   - Open Docker Desktop application
+   - Wait for Docker to finish starting up
+   - Verify Docker is running: `docker ps`
+
+3. Create required files:
 ```bash
-# Run all workflows
-act
+# Copy default configuration
+cp config/default.yml.example config/default.yml
 
-# Run a specific workflow
-act -W .github/workflows/test.yml
+# Create necessary directories
+mkdir -p config
+```
 
-# Run a specific job from a workflow
-act -j test -W .github/workflows/test.yml
+#### Running Individual Workflows
 
-# Run workflow with specific event
-act pull_request
+1. Lint Workflow (Ubuntu-compatible):
+```bash
+act -j lint -W .github/workflows/lint.yml \
+  -P ubuntu-latest=catthehacker/ubuntu:act-latest
+```
+
+2. Documentation Sync (Ubuntu-compatible):
+```bash
+act -j sync-docs -W .github/workflows/docs-sync.yml \
+  -P ubuntu-latest=catthehacker/ubuntu:act-latest
+```
+
+3. GitHub Pages (Ubuntu-compatible):
+```bash
+act -j build -W .github/workflows/pages.yml \
+  -P ubuntu-latest=catthehacker/ubuntu:act-latest
+```
+
+#### Workflows with Limited Local Support
+
+The following workflows require macOS and have limited support in `act`:
+
+1. Test Workflow:
+```bash
+# Note: Some macOS-specific commands may fail
+act -j test -W .github/workflows/test.yml \
+  -P ubuntu-latest=catthehacker/ubuntu:act-latest
+```
+
+2. Installation Test:
+```bash
+# Note: Some macOS-specific commands may fail
+act -j test-install -W .github/workflows/install-test.yml \
+  -P ubuntu-latest=catthehacker/ubuntu:act-latest
+```
+
+3. Release Workflow:
+```bash
+# Note: Tag creation may not work locally
+act -j release -W .github/workflows/release.yml \
+  -P ubuntu-latest=catthehacker/ubuntu:act-latest
+```
+
+#### Running All Workflows
+
+You can run multiple workflows in a few ways:
+
+1. Run workflows individually:
+```bash
+# Run lint workflow
+act -j lint -W .github/workflows/lint.yml -P ubuntu-latest=catthehacker/ubuntu:act-latest
+
+# Run docs-sync workflow
+act -j sync-docs -W .github/workflows/docs-sync.yml -P ubuntu-latest=catthehacker/ubuntu:act-latest
+
+# Run pages workflow
+act -j build -W .github/workflows/pages.yml -P ubuntu-latest=catthehacker/ubuntu:act-latest
+```
+
+2. Run all workflows triggered by an event:
+```bash
+# Run all workflows that trigger on pull_request
+act pull_request -P ubuntu-latest=catthehacker/ubuntu:act-latest
+
+# Run all workflows that trigger on push
+act push -P ubuntu-latest=catthehacker/ubuntu:act-latest
 
 # List all available actions
 act -l
 ```
 
-3. Common workflow commands:
+Note: Some workflows might be skipped if they require macOS runners or specific GitHub tokens.
+
+#### Environment Variables and Secrets
+
+For workflows that require secrets:
+
+1. Create a `.secrets` file:
 ```bash
-# Test the lint workflow
-act -j lint -W .github/workflows/lint.yml
-
-# Test the installation workflow
-act -j test-install -W .github/workflows/install-test.yml
-
-# Test the release workflow (dry-run)
-act -n -j release -W .github/workflows/release.yml
+# .secrets
+GITHUB_TOKEN=your_github_token
 ```
 
-Note: Some actions might require secrets or specific GitHub environment variables. You can provide these using a `.secrets` file or the `-s` flag:
-
+2. Run with secrets:
 ```bash
-act -s GITHUB_TOKEN=your_token
+act --secret-file .secrets -P ubuntu-latest=catthehacker/ubuntu:act-latest
+```
+
+#### Troubleshooting Common Issues
+
+1. **Missing Configuration**:
+```bash
+# Error: No such file or directory
+# Solution: Create required config
+cp config/default.yml.example config/default.yml
+```
+
+2. **Docker Issues**:
+```bash
+# Error: Cannot connect to Docker daemon
+# Solution: Start Docker Desktop and wait
+```
+
+3. **Permission Issues**:
+```bash
+# Error: Permission denied
+# Solution: Ensure files are executable
+chmod +x setup.sh test/*.sh lib/modules/*.sh
 ```
 
 ## 🔍 Troubleshooting
