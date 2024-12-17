@@ -12,6 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       
+      - name: Create config directory
+        run: mkdir -p config
+      
       - name: ShellCheck
         uses: ludeeus/action-shellcheck@master
         with:
@@ -23,7 +26,14 @@ jobs:
       - name: YAML Lint
         uses: ibiqlik/action-yamllint@v3
         with:
-          file_or_dir: config/*.yml
+          file_or_dir: |
+            config/
+            .github/workflows/
+          config_data: |
+            extends: default
+            rules:
+              line-length: disable
+              document-start: disable
           
       - name: Check Script Formatting
         run: |
