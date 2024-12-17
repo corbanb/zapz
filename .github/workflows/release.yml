@@ -12,10 +12,15 @@ on:
 jobs:
   release:
     runs-on: macos-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check for existing tags
         id: check_tags
@@ -29,8 +34,8 @@ jobs:
       - name: Create initial tag
         if: steps.check_tags.outputs.has_tags == 'false'
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
           echo "Creating initial v0.1.0 tag"
           git tag -a v0.1.0 -m "Initial release"
           git push origin v0.1.0

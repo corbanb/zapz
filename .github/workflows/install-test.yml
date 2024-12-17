@@ -1,8 +1,9 @@
+---
 name: Installation Test
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
     types: [opened, synchronize, reopened]
   schedule:
     - cron: '0 0 * * 0'  # Weekly on Sunday
@@ -18,6 +19,8 @@ jobs:
       matrix:
         os-version: [monterey, ventura, sonoma]
     steps:
+      - uses: actions/checkout@v3
+
       - name: Clean Environment
         id: clean
         run: |
@@ -27,6 +30,7 @@ jobs:
       - name: Test Installation
         id: install
         run: |
+          mkdir -p ~/.local/bin/mac-setup/config
           curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | bash
           zapz --version
 
