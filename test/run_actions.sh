@@ -59,6 +59,7 @@ run_all() {
     run_workflow "lint" || ((failed++))
     run_workflow "test" || ((failed++))
     run_workflow "test-install" || ((failed++))
+    run_workflow "enforce-pr-rules" "pull_request" || ((failed++))
 
     # Documentation workflows
     log_header "Running Documentation Workflows"

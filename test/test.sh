@@ -155,6 +155,11 @@ main() {
         "yq e '.homebrew.formulas' \"$PROJECT_ROOT/config/default.yml.example\" &>/dev/null && \
          yq e '.homebrew.casks' \"$PROJECT_ROOT/config/default.yml.example\" &>/dev/null" || ((failed_tests++))
 
+    # Test PR requirements
+    run_test "PR title format validation regex is valid" \
+        "echo 'feat: test title' | grep -E '^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+' &>/dev/null && \
+         echo 'fix(core): another test' | grep -E '^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+' &>/dev/null" || ((failed_tests++))
+
     # Test file permissions and structure
     run_test "Critical files are executable" \
         "{ [[ -x \"$PROJECT_ROOT/setup.sh\" ]] || echo \"setup.sh is not executable\"; } && \

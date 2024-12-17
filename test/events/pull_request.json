@@ -1,0 +1,22 @@
+{
+  "action": "opened",
+  "pull_request": {
+    "number": 1,
+    "title": "feat: test pull request",
+    "body": "This is a test pull request description",
+    "draft": false,
+    "head": {
+      "ref": "feature-branch",
+      "sha": "1234567890abcdef1234567890abcdef12345678"
+    },
+    "base": {
+      "ref": "main"
+    }
+  },
+  "repository": {
+    "name": "macos-developer-setup",
+    "full_name": "user/macos-developer-setup",
+    "private": false,
+    "html_url": "https://github.com/user/macos-developer-setup"
+  }
+}

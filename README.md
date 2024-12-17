@@ -427,7 +427,14 @@ act -j lint -W .github/workflows/lint.yml \
   --secret-file .secrets
 ```
 
-2. Documentation Sync (Ubuntu-compatible):
+2. PR Checks Workflow (Ubuntu-compatible):
+```bash
+act -j enforce-pr-rules -W .github/workflows/pr-checks.yml \
+  -P ubuntu-latest=catthehacker/ubuntu:act-latest \
+  -e test/events/pull_request.json
+```
+
+3. Documentation Sync (Ubuntu-compatible):
 ```bash
 act -j sync-docs -W .github/workflows/docs-sync.yml \
   -P ubuntu-latest=catthehacker/ubuntu:act-latest \
@@ -440,6 +447,25 @@ act -j build -W .github/workflows/pages.yml \
   -P ubuntu-latest=catthehacker/ubuntu:act-latest \
   --secret-file .secrets
 ```
+
+#### Pull Request Requirements
+
+When creating a pull request, please ensure:
+
+1. **Title Format**: Use conventional commits format
+   - Format: `type(scope): description`
+   - Types: feat, fix, docs, style, refactor, test, chore
+   - Example: `feat(core): add new installation option`
+
+2. **Description**: Include a detailed description of your changes
+
+3. **Draft PRs**: Ensure PR is not in draft state when ready for review
+
+4. **Checks**: All automated checks must pass:
+   - Linting (shellcheck & yamllint)
+   - Tests (core & installation)
+   - PR title format validation
+   - Documentation updates (if applicable)
 
 #### Workflows with Limited Local Support
 
