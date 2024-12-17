@@ -21,11 +21,13 @@ jobs:
         brew install shellcheck shfmt
 
     - name: Run Tests
+      id: tests
       run: |
         chmod +x test/test.sh
         ./test/test.sh
 
     - name: Run Installation Tests
+      id: install_tests
       run: |
         chmod +x test/test_install.sh
         ./test/test_install.sh
@@ -35,12 +37,16 @@ jobs:
       if: always()
       with:
         script: |
-          const message = job.status === 'success'
+          const success = context.job === 'test' &&
+            steps.tests.outcome === 'success' &&
+            steps.install_tests.outcome === 'success';
+
+          const message = success
             ? '✅ All tests passed!'
             : '❌ Some tests failed. Please check the logs.';
 
           if (context.issue.number) {
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
