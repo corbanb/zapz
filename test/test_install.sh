@@ -173,17 +173,31 @@ test_installation() {
 
     # Test secrets setup
     run_test "Secrets file created during installation" \
-        "mkdir -p \"$HOME/.local/bin\" && touch \"$HOME/.local/bin/.secrets\"" || ((failed_tests++))
+        "mkdir -p \"$HOME/.local/bin\" && \
+         touch \"$HOME/.local/bin/.secrets\" && \
+         [[ -f \"$HOME/.local/bin/.secrets\" ]]" || ((failed_tests++))
 
     run_test "Secrets file has correct permissions" \
-        "chmod 600 \"$HOME/.local/bin/.secrets\" 2>/dev/null && \
-         [[ \"$(stat -f %Lp \"$HOME/.local/bin/.secrets\" 2>/dev/null)\" == \"600\" ]]" || ((failed_tests++))
+        "secrets_file=\"$HOME/.local/bin/.secrets\" && \
+         if [[ ! -f \"\$secrets_file\" ]]; then \
+             touch \"\$secrets_file\"; \
+         fi && \
+         chmod 600 \"\$secrets_file\" && \
+         perms=\$(stat -f '%OLp' \"\$secrets_file\") && \
+         echo \"Current permissions: \$perms\" && \
+         if [[ \"\$perms\" != \"600\" ]]; then \
+             echo \"Expected permissions: 600\" && \
+             exit 1; \
+         fi && \
+         exit 0" || ((failed_tests++))
 
     run_test "Secrets file contains required tokens" \
-        "cp \"$PROJECT_ROOT/.secrets.example\" \"$HOME/.local/bin/.secrets\" 2>/dev/null && \
+        "if [[ ! -f \"$HOME/.local/bin/.secrets\" ]]; then \
+            cp \"$PROJECT_ROOT/.secrets.example\" \"$HOME/.local/bin/.secrets\"; \
+         fi && \
          chmod 600 \"$HOME/.local/bin/.secrets\" && \
-         grep -q 'GITHUB_TOKEN=' \"$HOME/.local/bin/.secrets\" && \
-         grep -q 'github-token=' \"$HOME/.local/bin/.secrets\"" || ((failed_tests++))
+         grep -q '^GITHUB_TOKEN=' \"$HOME/.local/bin/.secrets\" && \
+         grep -q '^github-token=' \"$HOME/.local/bin/.secrets\"" || ((failed_tests++))
 
     # Test update scenario
     run_test "Update existing installation works" \
