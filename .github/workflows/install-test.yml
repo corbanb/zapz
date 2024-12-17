@@ -16,11 +16,11 @@ jobs:
         run: |
           rm -rf ~/.local/bin/zapz
           rm -rf ~/.zapz*
-          
+
       - name: Test Installation
         run: |
           curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | bash
           zapz --version
-          
+
       - name: Test Basic Setup
-        run: zapz --test 
+        run: zapz --test

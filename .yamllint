@@ -29,7 +29,10 @@ rules:
   indentation:
     spaces: 2
     indent-sequences: true
-  line-length: 120
+  line-length:
+    max: 120
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
   truthy:
     check-keys: false
-    allowed-values: ['true', 'false', 'yes', 'no'] 
+    allowed-values: ['true', 'false', 'yes', 'no']
