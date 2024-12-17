@@ -1,0 +1,91 @@
+---
+name: Pull Request Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  enforce-pr-rules:
+    name: Enforce PR Rules
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR Requirements
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pr = context.payload.pull_request;
+
+            // Create a list of requirements
+            const requirements = [];
+
+            // Check PR title format
+            if (!pr.title.match(/^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+/)) {
+              requirements.push('- PR title must follow conventional commits format (e.g., feat: add new feature)');
+            }
+
+            // Check PR description
+            if (!pr.body || pr.body.length < 10) {
+              requirements.push('- PR must include a detailed description');
+            }
+
+            // Check for draft PRs
+            if (pr.draft) {
+              requirements.push('- PR must not be in draft state');
+            }
+
+            // If there are missing requirements, comment and fail
+            if (requirements.length > 0) {
+              const comment = `## ❌ Pull Request Requirements\n\nThis PR does not meet the following requirements:\n\n${requirements.join('\n')}\n\nPlease address these issues before merging.`;
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: pr.number,
+                body: comment
+              });
+
+              core.setFailed('PR requirements not met');
+            } else {
+              const comment = `## ✅ Pull Request Requirements\n\nAll requirements are met! Please wait for review.`;
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: pr.number,
+                body: comment
+              });
+            }
+
+  block-merge:
+    name: Block Auto-Merge
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Auto-Merge
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pr = context.payload.pull_request;
+
+            // If PR has auto-merge enabled, disable it
+            if (pr.auto_merge) {
+              await github.rest.pulls.updateBranch({
+                owner,
+                repo,
+                pull_number: pr.number,
+                expected_head_sha: pr.head.sha
+              });
+
+              const comment = `## ⚠️ Auto-Merge Disabled\n\nAuto-merge has been disabled for this PR. All PRs require manual review and approval.`;
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: pr.number,
+                body: comment
+              });
+
+              core.setFailed('Auto-merge is not allowed');
+            }
