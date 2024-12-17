@@ -1,20 +1,24 @@
 name: Release Management
 
 on:
+  pull_request:
+    branches: [ main ]
+    types: [opened, synchronize, reopened]
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   release:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Generate Changelog
         id: changelog
         uses: mikepenz/release-changelog-builder-action@v4
-        
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -24,4 +28,4 @@ jobs:
             LICENSE
             README.md
           draft: false
-          prerelease: false 
+          prerelease: false
