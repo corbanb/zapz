@@ -18,16 +18,16 @@ run_test() {
     local test_name="$1"
     local test_command="$2"
     local error_output
-    
+
     log_info "Running test: $test_name"
-    
+
     # Add test to order tracking
     TEST_NAMES[${#TEST_NAMES[@]}]="$test_name"
-    
+
     # Capture both output and exit status
     error_output=$(eval "$test_command" 2>&1)
     local status="$?"
-    
+
     if [ $status -eq 0 ]; then
         log_success "✓ $test_name"
         TEST_RESULTS[${#TEST_RESULTS[@]}]="pass"
@@ -46,13 +46,13 @@ print_test_summary() {
     local failed_tests=$1
     local total_tests=${#TEST_NAMES[@]}
     local passed_tests=$((total_tests - failed_tests))
-    
+
     echo
     log_header "Test Summary"
     echo "Total Tests: $total_tests"
     echo "Passed: $passed_tests"
     echo "Failed: $failed_tests"
-    
+
     if ((failed_tests > 0)); then
         echo
         log_header "Failed Tests Details"
@@ -90,11 +90,11 @@ setup() {
     export INSTALL_DIR="$TEST_DIR/mac-setup"
     export HOME="$TEST_DIR/home"
     mkdir -p "$HOME"
-    
+
     # Create mock repository structure
     mkdir -p "$INSTALL_DIR"
     cp -R "$PROJECT_ROOT"/* "$INSTALL_DIR/"
-    
+
     # Create mock git directory to prevent actual git operations
     mkdir -p "$INSTALL_DIR/.git"
 }
@@ -102,9 +102,9 @@ setup() {
 # Test installation
 test_installation() {
     local failed_tests=0
-    
+
     log_header "Testing Installation Process"
-    
+
     # Mock git commands for testing
     git() {
         case "$1" in
@@ -124,58 +124,69 @@ test_installation() {
         esac
     }
     export -f git
-    
+
     # Test clean installation
     run_test "Clean installation works" \
         "INSTALL_DIR=$INSTALL_DIR MOCK_INSTALL=true bash ${PROJECT_ROOT}/install.sh" || ((failed_tests++))
-    
+
     # Initialize mock git repo for update test
     if [[ -d "$INSTALL_DIR/.git" ]]; then
         (cd "$INSTALL_DIR" && command git init -q && command git add . && command git commit -m "Initial" -q)
     fi
-    
+
     # Test directory structure
     run_test "Installation directory exists" \
         "[[ -d \"$INSTALL_DIR\" ]]" || ((failed_tests++))
-    
+
     # Test file permissions
     run_test "Installed files are executable" \
         "[[ -x \"$INSTALL_DIR/setup.sh\" ]] && \
          [[ -x \"$INSTALL_DIR/test/test.sh\" ]]" || ((failed_tests++))
-    
+
     # Test symlink creation
     run_test "Symlink created correctly" \
         "[[ -L \"$HOME/.local/bin/zapz\" ]] && \
          [[ -x \"$HOME/.local/bin/zapz\" ]]" || ((failed_tests++))
-    
+
     # Test PATH configuration
     run_test "PATH configuration added to shell rc" \
         "grep -q 'PATH.*/.local/bin' \"$HOME/.zshrc\" || \
          grep -q 'PATH.*/.local/bin' \"$HOME/.bashrc\"" || ((failed_tests++))
-    
+
+    # Test secrets setup
+    run_test "Secrets file created during installation" \
+        "[[ -f \"$HOME/.local/bin/.secrets\" ]]" || ((failed_tests++))
+
+    run_test "Secrets file has correct permissions" \
+        "stat -f %Lp \"$HOME/.local/bin/.secrets\" | grep -q '^600$'" || ((failed_tests++))
+
+    run_test "Secrets file contains required tokens" \
+        "grep -q 'GITHUB_TOKEN=' \"$HOME/.local/bin/.secrets\" && \
+         grep -q 'github-token=' \"$HOME/.local/bin/.secrets\"" || ((failed_tests++))
+
     # Test update scenario
     run_test "Update existing installation works" \
         "INSTALL_DIR=$INSTALL_DIR bash ${PROJECT_ROOT}/install.sh" || ((failed_tests++))
-    
+
     # Test dependencies
     run_test "Dependencies are available after install" \
         "command -v yq" || ((failed_tests++))
-    
+
     # Test update notification setup
     run_test "Update checker is installed" \
         "[[ -f \"$INSTALL_DIR/lib/check_update.sh\" ]]" || ((failed_tests++))
-    
+
     run_test "Update check is added to shell RC" \
         "grep -q 'zapz update check' \"$HOME/.zshrc\" || \
          grep -q 'zapz update check' \"$HOME/.bashrc\"" || ((failed_tests++))
-    
+
     run_test "Update cache directory exists" \
         "test -f '$HOME/.zapz_update_check' || { mkdir -p '$HOME' && touch '$HOME/.zapz_update_check'; }" || ((failed_tests++))
-    
+
     # Print detailed summary
     print_test_summary "$failed_tests"
-    
-    if ((failed_tests > 0)); then    
+
+    if ((failed_tests > 0)); then
         exit 1
     else
         log_success "All installation tests passed successfully"
@@ -186,7 +197,7 @@ test_installation() {
 main() {
     # Setup test environment
     setup
-    
+
     # Run installation tests
     test_installation
 }
@@ -195,4 +206,4 @@ main() {
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     trap 'echo "Error: Test script failed on line $LINENO"; cleanup' ERR
     main "$@"
-fi 
+fi
