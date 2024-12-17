@@ -38,8 +38,8 @@ jobs:
       with:
         script: |
           const success = context.job === 'test' &&
-            steps.tests.outcome === 'success' &&
-            steps.install_tests.outcome === 'success';
+            context.steps.tests.outcome === 'success' &&
+            context.steps.install_tests.outcome === 'success';
 
           const message = success
             ? '✅ All tests passed!'

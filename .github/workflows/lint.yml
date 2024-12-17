@@ -50,10 +50,10 @@ jobs:
         with:
           script: |
             const success = context.job === 'lint' &&
-              steps.config.outcome === 'success' &&
-              steps.shellcheck.outcome === 'success' &&
-              steps.yamllint.outcome === 'success' &&
-              steps.shfmt.outcome === 'success';
+              context.steps.config.outcome === 'success' &&
+              context.steps.shellcheck.outcome === 'success' &&
+              context.steps.yamllint.outcome === 'success' &&
+              context.steps.shfmt.outcome === 'success';
 
             const message = success
               ? '✅ All checks passed!'

@@ -40,9 +40,9 @@ jobs:
         with:
           script: |
             const success = context.job === 'test-install' &&
-              steps.clean.outcome === 'success' &&
-              steps.install.outcome === 'success' &&
-              steps.setup.outcome === 'success';
+              context.steps.clean.outcome === 'success' &&
+              context.steps.install.outcome === 'success' &&
+              context.steps.setup.outcome === 'success';
 
             const message = success
               ? '✅ Installation test passed!'
