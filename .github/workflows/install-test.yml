@@ -27,9 +27,24 @@ jobs:
 
       - name: Setup Config
         run: |
-          cp config/default.yml.example config/default.yml
-          cp .secrets.example .secrets
-          chmod 600 .secrets
+          # Create all required directories
+          mkdir -p ~/.local/bin/mac-setup/config
+          mkdir -p ~/.local/bin/mac-setup/lib/modules
+
+          # Copy config files
+          cp config/default.yml.example ~/.local/bin/mac-setup/config/
+          cp .secrets.example ~/.local/bin/mac-setup/.secrets
+          chmod 600 ~/.local/bin/mac-setup/.secrets
+
+          # Verify files exist
+          if [[ ! -f ~/.local/bin/mac-setup/config/default.yml.example ]]; then
+            echo "Error: Failed to copy default.yml.example"
+            exit 1
+          fi
+          if [[ ! -f ~/.local/bin/mac-setup/.secrets ]]; then
+            echo "Error: Failed to copy .secrets.example"
+            exit 1
+          fi
 
       - name: Test Installation
         run: |

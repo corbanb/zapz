@@ -52,7 +52,7 @@ jobs:
               const jobs = await github.rest.actions.listJobsForWorkflowRun({
                 owner,
                 repo,
-                run_id,
+                run_id
               });
 
               const job = jobs.data.jobs.find(j => j.name === 'lint');
