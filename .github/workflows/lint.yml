@@ -18,9 +18,11 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Create config directory
+        id: config
         run: mkdir -p config
 
       - name: ShellCheck
+        id: shellcheck
         uses: ludeeus/action-shellcheck@master
         with:
           scandir: '.'
@@ -28,6 +30,7 @@ jobs:
           check_together: true
 
       - name: YAML Lint
+        id: yamllint
         uses: ibiqlik/action-yamllint@v3.1.1
         with:
           file_or_dir: |
@@ -36,6 +39,7 @@ jobs:
           config_file: .yamllint
 
       - name: Check Script Formatting
+        id: shfmt
         run: |
           brew install shfmt
           shfmt -d .
@@ -45,12 +49,18 @@ jobs:
         if: always()
         with:
           script: |
-            const message = job.status === 'success'
+            const success = context.job === 'lint' &&
+              steps.config.outcome === 'success' &&
+              steps.shellcheck.outcome === 'success' &&
+              steps.yamllint.outcome === 'success' &&
+              steps.shfmt.outcome === 'success';
+
+            const message = success
               ? '✅ All checks passed!'
               : '❌ Some checks failed. Please fix the issues above.';
 
             if (context.issue.number) {
-              github.rest.issues.createComment({
+              await github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
