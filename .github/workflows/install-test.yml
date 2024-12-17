@@ -27,10 +27,15 @@ jobs:
           rm -rf ~/.local/bin/zapz
           rm -rf ~/.zapz*
 
+      - name: Setup Config
+        id: setup_config
+        run: |
+          mkdir -p ~/.local/bin/mac-setup/config
+          cp config/default.yml.example ~/.local/bin/mac-setup/config/default.yml.example
+
       - name: Test Installation
         id: install
         run: |
-          mkdir -p ~/.local/bin/mac-setup/config
           curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | bash
           zapz --version
 
@@ -55,10 +60,12 @@ jobs:
             const getStepByName = (name) => allSteps.find(step => step.name.toLowerCase().includes(name.toLowerCase()));
 
             const cleanStep = getStepByName('clean environment');
+            const configStep = getStepByName('setup config');
             const installStep = getStepByName('test installation');
             const setupStep = getStepByName('test basic setup');
 
             const success = cleanStep?.conclusion === 'success' &&
+              configStep?.conclusion === 'success' &&
               installStep?.conclusion === 'success' &&
               setupStep?.conclusion === 'success';
 

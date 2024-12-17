@@ -1,8 +1,9 @@
+---
 name: Release Management
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
     types: [opened, synchronize, reopened]
   push:
     tags:

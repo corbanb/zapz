@@ -1,3 +1,4 @@
+---
 name: Update Dependencies
 
 on:
@@ -10,15 +11,15 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Check Homebrew Updates
         run: |
           brew update
           brew outdated
-          
+
       - name: Create PR if Updates Available
         uses: peter-evans/create-pull-request@v5
         with:
           title: 'chore: update homebrew dependencies'
           body: 'Updates available for homebrew packages'
-          branch: 'chore/update-dependencies' 
+          branch: 'chore/update-dependencies'
