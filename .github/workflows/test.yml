@@ -1,0 +1,36 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Run shellcheck
+      run: |
+        brew install shellcheck
+        shellcheck setup.sh lib/**/*.sh test/test.sh
+    
+    - name: Install dependencies
+      run: |
+        brew install yq
+    
+    - name: Run tests
+      run: |
+        chmod +x test/run_tests.sh test/*.sh
+        ./test/run_tests.sh
+    
+    - name: Test real-world installation
+      run: |
+        # Test installation as a user would experience it
+        curl -fsSL $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/raw/$GITHUB_SHA/install.sh | bash
+        # Verify installation
+        source ~/.zshrc
+        zapz --help

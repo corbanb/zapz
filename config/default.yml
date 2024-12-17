@@ -1,0 +1,71 @@
+---
+# Default configuration for macOS setup
+
+# Git configuration
+git:
+  user:
+    name: "Your Name"
+    email: "your.email@example.com"
+  editor: "code --wait"
+  default_branch: "main"
+
+# Node.js configuration
+node:
+  versions:
+    - "lts/hydrogen"  # Node.js 18
+    - "lts/iron"      # Node.js 20
+  default: "lts/iron"
+  global_packages:
+    - "pnpm"
+    - "typescript"
+    - "ts-node"
+    - "nodemon"
+
+# Homebrew packages
+homebrew:
+  taps:
+    - "homebrew/cask"
+    - "homebrew/cask-fonts"
+  formulas:
+    - "git"
+    - "gh"
+    - "tree"
+    - "jq"
+    - "wget"
+  casks:
+    - "arc"
+    - "figma"
+    - "cursor"
+    - "slack"
+    - "spotify"
+    - "visual-studio-code"
+    - "sourcetree"
+    - "warp"
+    - "1password"
+
+# System preferences
+macos:
+  dock:
+    autohide: true
+    magnification: true
+  keyboard:
+    key_repeat: 2
+    initial_key_repeat: 15
+
+# Cron configuration
+cron:
+  backup_time: "00 00 * * *"  # Daily at midnight
+  notification_email: "your.email@example.com"
+  update_schedule:
+    enabled: true
+    frequency: "daily"    # Options: daily, weekly, monthly
+    time: "00:00"        # 24-hour format
+    days: ["Sunday"]     # For weekly/monthly: which days to run
+  terminal_update:
+    enabled: true        # Check for updates when opening terminal
+    frequency: 86400     # Minimum seconds between checks (24h)
+
+# CLI configuration
+cli:
+  alias: "zapz"         # Command alias
+  auto_alias: true      # Automatically add alias to shell config
