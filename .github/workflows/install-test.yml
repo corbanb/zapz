@@ -19,16 +19,19 @@ jobs:
         os-version: [monterey, ventura, sonoma]
     steps:
       - name: Clean Environment
+        id: clean
         run: |
           rm -rf ~/.local/bin/zapz
           rm -rf ~/.zapz*
 
       - name: Test Installation
+        id: install
         run: |
           curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | bash
           zapz --version
 
       - name: Test Basic Setup
+        id: setup
         run: zapz --test
 
       - name: Report Status
@@ -36,12 +39,17 @@ jobs:
         if: always()
         with:
           script: |
-            const message = job.status === 'success'
+            const success = context.job === 'test-install' &&
+              steps.clean.outcome === 'success' &&
+              steps.install.outcome === 'success' &&
+              steps.setup.outcome === 'success';
+
+            const message = success
               ? '✅ Installation test passed!'
               : '❌ Installation test failed. Please check the logs.';
 
             if (context.issue.number) {
-              github.rest.issues.createComment({
+              await github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
