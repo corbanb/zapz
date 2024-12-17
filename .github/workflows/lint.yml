@@ -49,11 +49,26 @@ jobs:
         if: always()
         with:
           script: |
-            const success = context.job === 'lint' &&
-              context.steps.config.outcome === 'success' &&
-              context.steps.shellcheck.outcome === 'success' &&
-              context.steps.yamllint.outcome === 'success' &&
-              context.steps.shfmt.outcome === 'success';
+            const allSteps = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId
+            }).then(response => {
+              const job = response.data.jobs.find(j => j.name === 'lint');
+              return job ? job.steps : [];
+            });
+
+            const getStepByName = (name) => allSteps.find(step => step.name.toLowerCase().includes(name.toLowerCase()));
+
+            const configStep = getStepByName('config');
+            const shellcheckStep = getStepByName('shellcheck');
+            const yamllintStep = getStepByName('yaml lint');
+            const shfmtStep = getStepByName('script formatting');
+
+            const success = configStep?.conclusion === 'success' &&
+              shellcheckStep?.conclusion === 'success' &&
+              yamllintStep?.conclusion === 'success' &&
+              shfmtStep?.conclusion === 'success';
 
             const message = success
               ? '✅ All checks passed!'

@@ -37,9 +37,22 @@ jobs:
       if: always()
       with:
         script: |
-          const success = context.job === 'test' &&
-            context.steps.tests.outcome === 'success' &&
-            context.steps.install_tests.outcome === 'success';
+          const allSteps = await github.rest.actions.listJobsForWorkflowRun({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            run_id: context.runId
+          }).then(response => {
+            const job = response.data.jobs.find(j => j.name === 'test');
+            return job ? job.steps : [];
+          });
+
+          const getStepByName = (name) => allSteps.find(step => step.name.toLowerCase().includes(name.toLowerCase()));
+
+          const testsStep = getStepByName('run tests');
+          const installTestsStep = getStepByName('installation tests');
+
+          const success = testsStep?.conclusion === 'success' &&
+            installTestsStep?.conclusion === 'success';
 
           const message = success
             ? '✅ All tests passed!'
