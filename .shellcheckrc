@@ -5,6 +5,7 @@ external-sources=true
 disable=SC2034  # Unused variables (these are used in sourced files)
 disable=SC2016  # Single quotes for eval expressions (intentional)
 disable=SC2129  # Multiple redirects (readability preference)
+disable=SC1091  # Not following external files
 
 # Set shell dialect
 shell=bash
