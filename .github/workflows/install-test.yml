@@ -1,0 +1,26 @@
+name: Installation Test
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+  workflow_dispatch:
+
+jobs:
+  test-install:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        os-version: [monterey, ventura, sonoma]
+    steps:
+      - name: Clean Environment
+        run: |
+          rm -rf ~/.local/bin/zapz
+          rm -rf ~/.zapz*
+          
+      - name: Test Installation
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | bash
+          zapz --version
+          
+      - name: Test Basic Setup
+        run: zapz --test 

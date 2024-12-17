@@ -1,0 +1,23 @@
+name: Sync Documentation
+
+on:
+  push:
+    paths:
+      - 'README.md'
+      - 'docs/**'
+    branches: [ main ]
+
+jobs:
+  sync-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Update Index from README
+        run: |
+          sed -n '/<div align="center"/,/<\/div>/!p' README.md > docs/index.md
+          
+      - name: Commit Changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "docs: sync README content to docs" 
