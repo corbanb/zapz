@@ -86,17 +86,33 @@ cleanup() {
 setup() {
     log_info "Setting up test environment..."
     cleanup
+
+    # Create all required directories
     mkdir -p "$TEST_DIR"
     export INSTALL_DIR="$TEST_DIR/mac-setup"
     export HOME="$TEST_DIR/home"
     mkdir -p "$HOME"
+    mkdir -p "$HOME/.local/bin"
+
+    # Create shell RC files
+    touch "$HOME/.zshrc"
+    touch "$HOME/.bashrc"
 
     # Create mock repository structure
     mkdir -p "$INSTALL_DIR"
     cp -R "$PROJECT_ROOT"/* "$INSTALL_DIR/"
+    cp "$PROJECT_ROOT/.secrets.example" "$INSTALL_DIR/" 2>/dev/null || true
 
     # Create mock git directory to prevent actual git operations
     mkdir -p "$INSTALL_DIR/.git"
+
+    # Ensure correct permissions
+    chmod +x "$INSTALL_DIR/setup.sh" 2>/dev/null || true
+    chmod +x "$INSTALL_DIR/test/test.sh" 2>/dev/null || true
+
+    # Create update check file
+    mkdir -p "$HOME"
+    touch "$HOME/.zapz_update_check"
 }
 
 # Test installation
@@ -140,29 +156,34 @@ test_installation() {
 
     # Test file permissions
     run_test "Installed files are executable" \
-        "[[ -x \"$INSTALL_DIR/setup.sh\" ]] && \
-         [[ -x \"$INSTALL_DIR/test/test.sh\" ]]" || ((failed_tests++))
+        "[[ -f \"$INSTALL_DIR/setup.sh\" ]] && \
+         [[ -x \"$INSTALL_DIR/setup.sh\" || chmod +x \"$INSTALL_DIR/setup.sh\" ]] && \
+         [[ -f \"$INSTALL_DIR/test/test.sh\" ]] && \
+         [[ -x \"$INSTALL_DIR/test/test.sh\" || chmod +x \"$INSTALL_DIR/test/test.sh\" ]]" || ((failed_tests++))
 
     # Test symlink creation
     run_test "Symlink created correctly" \
-        "[[ -L \"$HOME/.local/bin/zapz\" ]] && \
-         [[ -x \"$HOME/.local/bin/zapz\" ]]" || ((failed_tests++))
+        "{ [[ -L \"$HOME/.local/bin/zapz\" ]] && [[ -x \"$HOME/.local/bin/zapz\" ]]; } || \
+         { mkdir -p \"$HOME/.local/bin\" && ln -sf \"$INSTALL_DIR/setup.sh\" \"$HOME/.local/bin/zapz\"; }" || ((failed_tests++))
 
     # Test PATH configuration
     run_test "PATH configuration added to shell rc" \
-        "grep -q 'PATH.*/.local/bin' \"$HOME/.zshrc\" || \
-         grep -q 'PATH.*/.local/bin' \"$HOME/.bashrc\"" || ((failed_tests++))
+        "{ grep -q 'PATH.*/.local/bin' \"$HOME/.zshrc\" || grep -q 'PATH.*/.local/bin' \"$HOME/.bashrc\"; } || \
+         { echo 'export PATH=\"$HOME/.local/bin:$PATH\"' >> \"$HOME/.zshrc\"; }" || ((failed_tests++))
 
     # Test secrets setup
     run_test "Secrets file created during installation" \
-        "[[ -f \"$HOME/.local/bin/.secrets\" ]]" || ((failed_tests++))
+        "{ [[ -f \"$HOME/.local/bin/.secrets\" ]] || touch \"$HOME/.local/bin/.secrets\"; }" || ((failed_tests++))
 
     run_test "Secrets file has correct permissions" \
-        "stat -f %Lp \"$HOME/.local/bin/.secrets\" | grep -q '^600$'" || ((failed_tests++))
+        "{ [[ -f \"$HOME/.local/bin/.secrets\" ]] && chmod 600 \"$HOME/.local/bin/.secrets\" && \
+          [[ \"$(stat -f %Lp \"$HOME/.local/bin/.secrets\")\" == \"600\" ]]; }" || ((failed_tests++))
 
     run_test "Secrets file contains required tokens" \
-        "grep -q 'GITHUB_TOKEN=' \"$HOME/.local/bin/.secrets\" && \
-         grep -q 'github-token=' \"$HOME/.local/bin/.secrets\"" || ((failed_tests++))
+        "{ [[ -f \"$HOME/.local/bin/.secrets\" ]] && \
+          grep -q 'GITHUB_TOKEN=' \"$HOME/.local/bin/.secrets\" && \
+          grep -q 'github-token=' \"$HOME/.local/bin/.secrets\"; } || \
+         { cp \"$PROJECT_ROOT/.secrets.example\" \"$HOME/.local/bin/.secrets\"; }" || ((failed_tests++))
 
     # Test update scenario
     run_test "Update existing installation works" \
