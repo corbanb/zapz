@@ -8,6 +8,9 @@ The zero-dependency macOS development environment setup tool.
 [![Tests](https://github.com/corbanb/macos-setup/actions/workflows/test.yml/badge.svg)](https://github.com/corbanb/macos-setup/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![macOS](https://img.shields.io/badge/macOS-Monterey%2B-brightgreen)]()
+[![Documentation](https://img.shields.io/badge/docs-corbanb.github.io%2Fzapz-blue)](https://corbanb.github.io/zapz)
+
+[📖 Documentation](https://corbanb.github.io/zapz) | [🚀 Quick Start](#quick-start) | [⚙️ Configuration](#configuration) | [🔍 Examples](https://corbanb.github.io/zapz/examples)
 
 </div>
 
@@ -20,6 +23,8 @@ The zero-dependency macOS development environment setup tool.
 - Resetting development environments
 - Maintaining consistent setups across teams
 - Backing up and restoring development configurations
+
+📚 **[Full Documentation Available Here](https://corbanb.github.io/zapz)**
 
 ## ✨ Features
 
