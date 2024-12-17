@@ -45,14 +45,15 @@ jobs:
         if: always()
         with:
           script: |
-            const { conclusion } = context.payload.check_run;
-            const message = conclusion === 'success'
+            const message = job.status === 'success'
               ? '✅ All checks passed!'
               : '❌ Some checks failed. Please fix the issues above.';
 
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: message
-            });
+            if (context.issue.number) {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: message
+              });
+            }

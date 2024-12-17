@@ -35,8 +35,7 @@ jobs:
       if: always()
       with:
         script: |
-          const { conclusion } = context.payload.check_run;
-          const message = conclusion === 'success'
+          const message = job.status === 'success'
             ? '✅ All tests passed!'
             : '❌ Some tests failed. Please check the logs.';
 
