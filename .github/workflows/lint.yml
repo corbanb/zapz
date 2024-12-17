@@ -5,17 +5,24 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 jobs:
   lint:
     runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v3
 
       - name: Create config directory
+        id: config
         run: mkdir -p config
 
       - name: ShellCheck
+        id: shellcheck
         uses: ludeeus/action-shellcheck@master
         with:
           scandir: '.'
@@ -23,6 +30,7 @@ jobs:
           check_together: true
 
       - name: YAML Lint
+        id: yamllint
         uses: ibiqlik/action-yamllint@v3.1.1
         with:
           file_or_dir: |
@@ -31,6 +39,46 @@ jobs:
           config_file: .yamllint
 
       - name: Check Script Formatting
+        id: shfmt
         run: |
           brew install shfmt
           shfmt -d .
+
+      - name: Report Status
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            const allSteps = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId
+            }).then(response => {
+              const job = response.data.jobs.find(j => j.name === 'lint');
+              return job ? job.steps : [];
+            });
+
+            const getStepByName = (name) => allSteps.find(step => step.name.toLowerCase().includes(name.toLowerCase()));
+
+            const configStep = getStepByName('config');
+            const shellcheckStep = getStepByName('shellcheck');
+            const yamllintStep = getStepByName('yaml lint');
+            const shfmtStep = getStepByName('script formatting');
+
+            const success = configStep?.conclusion === 'success' &&
+              shellcheckStep?.conclusion === 'success' &&
+              yamllintStep?.conclusion === 'success' &&
+              shfmtStep?.conclusion === 'success';
+
+            const message = success
+              ? '✅ All checks passed!'
+              : '❌ Some checks failed. Please fix the issues above.';
+
+            if (context.issue.number) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: message
+              });
+            }

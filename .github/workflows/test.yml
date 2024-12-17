@@ -1,24 +1,69 @@
+---
 name: Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   test:
     runs-on: macos-latest
-    
+    permissions:
+      checks: write
+      pull-requests: write
+
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Run Tests
-      run: |
-        chmod +x test/test.sh
-        ./test/test.sh
-    
-    - name: Run Installation Tests
-      run: |
-        chmod +x test/test_install.sh
-        ./test/test_install.sh
+      - uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: |
+          brew install shellcheck shfmt
+
+      - name: Run Tests
+        id: tests
+        run: |
+          chmod +x test/test.sh
+          ./test/test.sh
+
+      - name: Run Installation Tests
+        id: install_tests
+        run: |
+          chmod +x test/test_install.sh
+          ./test/test_install.sh
+
+      - name: Report Status
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            const allSteps = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId
+            }).then(response => {
+              const job = response.data.jobs.find(j => j.name === 'test');
+              return job ? job.steps : [];
+            });
+
+            const getStepByName = (name) => allSteps.find(step => step.name.toLowerCase().includes(name.toLowerCase()));
+
+            const testsStep = getStepByName('run tests');
+            const installTestsStep = getStepByName('installation tests');
+
+            const success = testsStep?.conclusion === 'success' &&
+              installTestsStep?.conclusion === 'success';
+
+            const message = success
+              ? '✅ All tests passed!'
+              : '❌ Some tests failed. Please check the logs.';
+
+            if (context.issue.number) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: message
+              });
+            }

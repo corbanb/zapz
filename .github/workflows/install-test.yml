@@ -1,6 +1,10 @@
+---
 name: Installation Test
 
 on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
   schedule:
     - cron: '0 0 * * 0'  # Weekly on Sunday
   workflow_dispatch:
@@ -8,19 +12,65 @@ on:
 jobs:
   test-install:
     runs-on: macos-latest
+    permissions:
+      checks: write
+      pull-requests: write
     strategy:
       matrix:
         os-version: [monterey, ventura, sonoma]
     steps:
+      - uses: actions/checkout@v3
+
       - name: Clean Environment
+        id: clean
         run: |
           rm -rf ~/.local/bin/zapz
           rm -rf ~/.zapz*
 
       - name: Test Installation
+        id: install
         run: |
+          mkdir -p ~/.local/bin/mac-setup/config
           curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | bash
           zapz --version
 
       - name: Test Basic Setup
+        id: setup
         run: zapz --test
+
+      - name: Report Status
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            const allSteps = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId
+            }).then(response => {
+              const job = response.data.jobs.find(j => j.name === 'test-install');
+              return job ? job.steps : [];
+            });
+
+            const getStepByName = (name) => allSteps.find(step => step.name.toLowerCase().includes(name.toLowerCase()));
+
+            const cleanStep = getStepByName('clean environment');
+            const installStep = getStepByName('test installation');
+            const setupStep = getStepByName('test basic setup');
+
+            const success = cleanStep?.conclusion === 'success' &&
+              installStep?.conclusion === 'success' &&
+              setupStep?.conclusion === 'success';
+
+            const message = success
+              ? '✅ Installation test passed!'
+              : '❌ Installation test failed. Please check the logs.';
+
+            if (context.issue.number) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: message
+              });
+            }
