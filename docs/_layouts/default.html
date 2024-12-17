@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="{{ site.lang | default: "en-US" }}">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% seo %}
+    <link rel="stylesheet" href="{{ "/assets/css/style.css?v=" | append: site.github.build_revision | relative_url }}">
+  </head>
+  <body>
+    <header class="page-header">
+      <h1 class="project-name">{{ site.title | default: site.github.repository_name }}</h1>
+      <h2 class="project-tagline">{{ site.description | default: site.github.project_tagline }}</h2>
+      {% if site.github.is_project_page %}
+        <a href="{{ site.github.repository_url }}" class="btn">View on GitHub</a>
+      {% endif %}
+    </header>
+    
+    <nav class="main-nav">
+      <ul>
+        <li><a href="{{ '/' | relative_url }}">Home</a></li>
+        <li><a href="{{ '/docs' | relative_url }}">Documentation</a></li>
+        <li><a href="{{ '/configuration' | relative_url }}">Configuration</a></li>
+        <li><a href="{{ '/examples' | relative_url }}">Examples</a></li>
+        <li><a href="{{ '/recipes' | relative_url }}">Recipes</a></li>
+        <li><a href="{{ '/integrations' | relative_url }}">Integrations</a></li>
+        <li><a href="{{ '/cli' | relative_url }}">CLI</a></li>
+      </ul>
+    </nav>
+
+    <div class="container-lg px-3 my-5 markdown-body">
+      {{ content }}
+
+      {% if site.github.private != true and site.github.license %}
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. {% github_edit_link "Improve this page" %}.
+      </div>
+      {% endif %}
+    </div>
+  </body>
+</html> 
