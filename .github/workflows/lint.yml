@@ -15,7 +15,10 @@ jobs:
       - name: ShellCheck
         uses: ludeeus/action-shellcheck@master
         with:
-          scandir: './lib'
+          scandir: '.'
+          severity: warning
+          extra_args: '-x'
+          check_together: true
           
       - name: YAML Lint
         uses: ibiqlik/action-yamllint@v3
@@ -25,4 +28,4 @@ jobs:
       - name: Check Script Formatting
         run: |
           brew install shfmt
-          shfmt -d . 
+          shfmt -d .

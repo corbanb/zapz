@@ -172,8 +172,9 @@ EOF
     alias_name=$(yq e '.cli.alias' "$CONFIG_FILE")
     
     if ! grep -q "alias $alias_name=" "$shell_rc"; then
-        echo "# macOS setup tool alias and update check" >> "$shell_rc"
-        echo "alias $alias_name='$PROJECT_ROOT/setup.sh'" >> "$shell_rc"
-        echo "source $check_script" >> "$shell_rc"
+        {
+            echo "# macOS setup tool alias and update check"
+            echo 'export PATH="$HOME/.local/bin:$PATH"'
+        } >> "$shell_rc"
     fi
 } 

@@ -1,0 +1,15 @@
+# Allow following external sources
+external-sources=true
+
+# Disable specific checks
+disable=SC2034  # Unused variables (these are used in sourced files)
+disable=SC2016  # Single quotes for eval expressions (intentional)
+disable=SC2129  # Multiple redirects (readability preference)
+
+# Set shell dialect
+shell=bash
+
+# Source paths
+source-path=SCRIPTDIR
+source-path=SCRIPTDIR/lib
+source-path=SCRIPTDIR/lib/modules 

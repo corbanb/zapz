@@ -12,8 +12,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source utilities and modules
+# shellcheck source=lib/version.sh
 source "${SCRIPT_DIR}/lib/version.sh"
+# shellcheck source=lib/utils.sh
 source "${SCRIPT_DIR}/lib/utils.sh"
+# shellcheck source=lib/logging.sh
 source "${SCRIPT_DIR}/lib/logging.sh"
 
 # Source all setup modules
