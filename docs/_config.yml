@@ -1,13 +1,17 @@
 ---
 # Site settings
 title: macOS Developer Setup
-description: A powerful CLI tool for setting up macOS development environments
+description: A comprehensive tool for setting up macOS development environments
 baseurl: "/macos-developer-setup"
 url: ""
 
 # Build settings
 markdown: kramdown
-theme: jekyll-theme-cayman
+theme: jekyll-theme-minimal
+show_downloads: true
+github:
+  is_project_page: true
+  repository_url: https://github.com/yourusername/macos-developer-setup
 
 # Navigation
 nav_links:
