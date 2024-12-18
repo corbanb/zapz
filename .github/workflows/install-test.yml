@@ -21,10 +21,140 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v3
-      - name: Run Installation Test
+
+      - name: Clean Environment
+        timeout-minutes: 2
+        run: |
+          rm -rf ~/Library/Developer/Xcode/DerivedData
+          rm -rf ~/.local/bin/zapz
+          rm -rf ~/.zapz_update_check
+
+      - name: Setup Config
+        timeout-minutes: 2
+        run: |
+          # Create all required directories
+          mkdir -p ~/.local/bin/mac-setup/config
+          mkdir -p ~/.local/bin/mac-setup/lib/modules
+
+          # Copy config files
+          cp config/default.yml.example ~/.local/bin/mac-setup/config/
+          cp .secrets.example ~/.local/bin/mac-setup/.secrets
+          chmod 600 ~/.local/bin/mac-setup/.secrets
+
+          # Verify files exist
+          if [[ ! -f ~/.local/bin/mac-setup/config/default.yml.example ]]; then
+            echo "Error: Failed to copy default.yml.example"
+            exit 1
+          fi
+          if [[ ! -f ~/.local/bin/mac-setup/.secrets ]]; then
+            echo "Error: Failed to copy .secrets.example"
+            exit 1
+          fi
+
+      - name: Test Installation
+        timeout-minutes: 8
         run: |
           chmod +x ./install.sh
           ./install.sh
+
+      - name: Report Status
+        if: always()
+        timeout-minutes: 1
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const run_id = context.runId;
+
+            core.info(`Run ID: ${run_id}`);
+
+            if (!run_id) {
+              core.warning('No run ID found, skipping status report');
+              return;
+            }
+
+            try {
+              const jobs = await github.rest.actions.listJobsForWorkflowRun({
+                owner,
+                repo,
+                run_id,
+              });
+
+              const job = jobs.data.jobs.find(j => j.name.includes('macOS'));
+              if (!job) {
+                core.warning('Could not find test job');
+                return;
+              }
+
+              const conclusion = job.conclusion || 'pending';
+              core.info(`Job conclusion: ${conclusion}`);
+
+              // Get step information
+              const steps = job.steps || [];
+              const failedSteps = steps.filter(step => step.conclusion === 'failure');
+
+              // Create detailed comment
+              let comment = `## Installation Test Results\n\n`;
+
+              if (conclusion === 'success') {
+                comment += '✅ Installation completed successfully!\n\n';
+              } else if (conclusion === 'failure') {
+                comment += '❌ Installation failed.\n\n';
+
+                if (failedSteps.length > 0) {
+                  comment += '### Failed Steps\n';
+                  failedSteps.forEach(step => {
+                    comment += `- ${step.name}\n`;
+                    if (step.log) {
+                      comment += '```\n' + step.log + '\n```\n';
+                    }
+                  });
+                }
+              }
+
+              // Add test matrix information
+              comment += '\n### Test Matrix\n';
+              comment += `- macOS Version: ${process.env.MATRIX_OS_VERSION || 'latest'}\n`;
+              comment += `- Test Type: ${github.event_name === 'pull_request' ? 'Quick Test' : 'Full Matrix Test'}\n`;
+
+              // Add system information
+              comment += '\n### Environment Details\n';
+              comment += `- OS: ${process.env.RUNNER_OS}\n`;
+              comment += `- Runner: ${process.env.RUNNER_NAME}\n`;
+              comment += `- Workflow: ${context.workflow}\n`;
+              comment += `- Event: ${github.event_name}\n`;
+
+              // Add troubleshooting section
+              comment += '\n### Troubleshooting\n';
+              comment += '1. Check the [installation documentation](docs/documentation.md)\n';
+              comment += '2. Verify system requirements in [README.md](README.md)\n';
+              comment += '3. Review [common issues](docs/troubleshooting.md)\n';
+
+              // Add helpful links
+              comment += '\n### Helpful Links\n';
+              const configPath = 'blob/main/docs/configuration.md';
+              const links = [
+                `- [Installation Logs](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${run_id})`,
+                `- [Configuration Guide](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/${configPath})`
+              ];
+              comment += links.join('\n');
+
+              // Post comment if this is a PR
+              if (context.payload.pull_request) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: context.payload.pull_request.number,
+                  body: comment
+                });
+              }
+
+              if (conclusion === 'failure') {
+                core.setFailed('Installation tests failed. See detailed report in PR comment.');
+              }
+            } catch (error) {
+              core.warning(`Error getting job status: ${error.message}`);
+            }
 
   # Full matrix test for scheduled runs and manual triggers
   test-install-full:
