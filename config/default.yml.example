@@ -1,16 +1,13 @@
 ---
 # Default configuration for zapz development environment
-# This is an example configuration showing all available options
-# Copy this file to default.yml and customize to your needs
 
 # Git configuration
 git:
   user:
-    name: "Your Name"
-    email: "your.email@example.com"
-  editor: "code --wait"
+    name: ""  # Set via environment or CLI
+    email: "" # Set via environment or CLI
+  editor: "vim"
   default_branch: "main"
-  # Additional git settings
   config:
     core.autocrlf: "input"
     pull.rebase: "true"
@@ -42,13 +39,10 @@ homebrew:
     - "ripgrep"      # Fast search tool
     - "fd"           # Fast find alternative
   casks:
-    - "arc"          # Modern browser
-    - "figma"        # Design tool
-    - "cursor"       # AI-powered code editor
-    - "slack"        # Team communication
-    - "spotify"      # Music
     - "visual-studio-code"
-    - "sourcetree"   # Git GUI
+    - "iterm2"
+    - "docker"
+    - "arc"          # Modern browser
     - "warp"         # Modern terminal
     - "1password"    # Password manager
 
@@ -67,8 +61,6 @@ macos:
 
 # Cron configuration
 cron:
-  backup_time: "00 00 * * *"  # Daily at midnight
-  notification_email: "your.email@example.com"
   update_schedule:
     enabled: true
     frequency: "daily"    # Options: daily, weekly, monthly
@@ -83,13 +75,3 @@ cli:
   alias: "zapz"         # Command alias
   auto_alias: true      # Automatically add alias to shell config
   update_notifications: true  # Show update notifications
-
-# Development tools configuration
-vscode:
-  extensions:
-    - "dbaeumer.vscode-eslint"
-    - "esbenp.prettier-vscode"
-    - "github.copilot"
-  settings:
-    "editor.formatOnSave": true
-    "editor.defaultFormatter": "esbenp.prettier-vscode"

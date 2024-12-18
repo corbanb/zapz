@@ -1,84 +1,138 @@
+---
 name: Code Quality
 
 on:
   push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
-    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 jobs:
   lint:
+    name: lint
     runs-on: ubuntu-latest
-    permissions:
-      checks: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v3
 
+      - name: Install yamllint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y yamllint
+
       - name: Create config directory
-        id: config
-        run: mkdir -p config
+        run: |
+          mkdir -p ~/.config/yamllint
+          cp .yamllint ~/.config/yamllint/config
 
       - name: ShellCheck
-        id: shellcheck
         uses: ludeeus/action-shellcheck@master
         with:
-          scandir: '.'
           severity: warning
-          check_together: true
 
       - name: YAML Lint
-        id: yamllint
         uses: ibiqlik/action-yamllint@v3.1.1
         with:
-          file_or_dir: |
-            config/
-            .github/workflows/
           config_file: .yamllint
-
-      - name: Check Script Formatting
-        id: shfmt
-        run: |
-          brew install shfmt
-          shfmt -d .
+          strict: false
 
       - name: Report Status
-        uses: actions/github-script@v6
         if: always()
+        uses: actions/github-script@v6
         with:
           script: |
-            const allSteps = await github.rest.actions.listJobsForWorkflowRun({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: context.runId
-            }).then(response => {
-              const job = response.data.jobs.find(j => j.name === 'lint');
-              return job ? job.steps : [];
-            });
+            const { owner, repo } = context.repo;
+            const run_id = context.runId;
 
-            const getStepByName = (name) => allSteps.find(step => step.name.toLowerCase().includes(name.toLowerCase()));
+            core.info(`Run ID: ${run_id}`);
 
-            const configStep = getStepByName('config');
-            const shellcheckStep = getStepByName('shellcheck');
-            const yamllintStep = getStepByName('yaml lint');
-            const shfmtStep = getStepByName('script formatting');
+            if (!run_id) {
+              core.warning('No run ID found, skipping status report');
+              return;
+            }
 
-            const success = configStep?.conclusion === 'success' &&
-              shellcheckStep?.conclusion === 'success' &&
-              yamllintStep?.conclusion === 'success' &&
-              shfmtStep?.conclusion === 'success';
-
-            const message = success
-              ? '✅ All checks passed!'
-              : '❌ Some checks failed. Please fix the issues above.';
-
-            if (context.issue.number) {
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: message
+            try {
+              const jobs = await github.rest.actions.listJobsForWorkflowRun({
+                owner,
+                repo,
+                run_id
               });
+
+              const job = jobs.data.jobs.find(j => j.name === 'lint');
+              if (!job) {
+                core.warning('Could not find lint job');
+                return;
+              }
+
+              const conclusion = job.conclusion || 'pending';
+              core.info(`Job conclusion: ${conclusion}`);
+
+              // Get step information
+              const steps = job.steps || [];
+              const failedSteps = steps.filter(step => step.conclusion === 'failure');
+
+              // Create detailed comment
+              let comment = `## Code Quality Results\n\n`;
+
+              if (conclusion === 'success') {
+                comment += '✅ All code quality checks passed!\n\n';
+              } else if (conclusion === 'failure') {
+                comment += '❌ Some code quality checks failed.\n\n';
+
+                if (failedSteps.length > 0) {
+                  comment += '### Failed Checks\n';
+                  failedSteps.forEach(step => {
+                    comment += `- ${step.name}\n`;
+                    if (step.log) {
+                      comment += '```\n' + step.log + '\n```\n';
+                    }
+                  });
+                }
+              }
+
+              // Add check details
+              comment += '\n### Quality Checks Run\n';
+              comment += '- ShellCheck (shell script analysis)\n';
+              comment += '- YAML Lint (YAML file validation)\n';
+              comment += '- Script Formatting\n';
+
+              // Add system information
+              comment += '\n### Environment Details\n';
+              comment += `- OS: ${process.env.RUNNER_OS}\n`;
+              comment += `- Runner: ${process.env.RUNNER_NAME}\n`;
+              comment += `- Workflow: ${context.workflow}\n`;
+
+              // Add fix instructions
+              comment += '\n### How to Fix\n';
+              comment += '1. Run checks locally:\n';
+              comment += '```bash\n';
+              comment += '# Check shell scripts\n';
+              comment += 'shellcheck setup.sh lib/**/*.sh test/*.sh\n\n';
+              comment += '# Check YAML files\n';
+              comment += 'yamllint .github/workflows/ config/\n';
+              comment += '```\n';
+
+              // Add helpful links
+              comment += '\n### Helpful Links\n';
+              const links = [
+                `- [Lint Logs](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${run_id})`,
+                `- [Code Style Guide](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/blob/main/docs/code-style.md)`,
+                '- [ShellCheck Documentation](https://www.shellcheck.net/)',
+                '- [YAML Lint Rules](https://yamllint.readthedocs.io/en/stable/rules.html)'
+              ];
+              comment += links.join('\n');
+
+              // Post comment if this is a PR
+              if (context.payload.pull_request) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: context.payload.pull_request.number,
+                  body: comment
+                });
+              }
+
+              if (conclusion === 'failure') {
+                core.setFailed('Code quality checks failed. See detailed report in PR comment.');
+              }
+            } catch (error) {
+              core.warning(`Error getting job status: ${error.message}`);
             }

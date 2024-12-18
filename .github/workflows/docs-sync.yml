@@ -6,19 +6,35 @@ on:
     paths:
       - 'README.md'
       - 'docs/**'
-    branches: [main]
+      - '.github/workflows/docs-sync.yml'
 
 jobs:
   sync-docs:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Update Index from README
         run: |
-          sed -n '/<div align="center"/,/<\/div>/!p' README.md > docs/index.md
+          cp README.md docs/index.md
+          sed -i 's|](docs/|](|g' docs/index.md
 
-      - name: Commit Changes
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: "docs: sync README content to docs"
+      - name: Commit and Push Changes
+        run: |
+          git add docs/index.md
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "docs: sync README to docs/index.md"
+          git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}

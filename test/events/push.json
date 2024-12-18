@@ -1,0 +1,15 @@
+{
+  "ref": "refs/heads/main",
+  "before": "0000000000000000000000000000000000000000",
+  "after": "1111111111111111111111111111111111111111",
+  "repository": {
+    "name": "macos-developer-setup",
+    "full_name": "user/macos-developer-setup",
+    "private": false,
+    "html_url": "https://github.com/user/macos-developer-setup"
+  },
+  "pusher": {
+    "name": "user",
+    "email": "user@example.com"
+  }
+}

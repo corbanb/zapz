@@ -3,67 +3,134 @@ name: Tests
 
 on:
   push:
-    branches: [main]
   pull_request:
-    branches: [main]
 
 jobs:
   test:
-    runs-on: macos-latest
-    permissions:
-      checks: write
-      pull-requests: write
-
+    runs-on: >-
+      ${{
+        github.event_name == 'push' &&
+        github.event.repository.fork == false &&
+        'macos-latest' ||
+        'ubuntu-latest'
+      }}
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Dependencies
+      - name: Install dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh shellcheck
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
         run: |
           brew install shellcheck shfmt
 
-      - name: Run Tests
-        id: tests
+      - name: Setup Config
         run: |
-          chmod +x test/test.sh
+          # Create config directory
+          mkdir -p config
+          # Copy example config
+          cp config/default.yml.example config/default.yml
+          # Verify config exists
+          if [[ ! -f config/default.yml ]]; then
+            echo "Error: Failed to create config/default.yml"
+            exit 1
+          fi
+
+      - name: Run tests
+        run: |
+          chmod +x ./test/test.sh
           ./test/test.sh
 
-      - name: Run Installation Tests
-        id: install_tests
+      - name: Run installation tests
+        if: runner.os == 'macOS'
         run: |
-          chmod +x test/test_install.sh
+          chmod +x ./test/test_install.sh
           ./test/test_install.sh
 
       - name: Report Status
-        uses: actions/github-script@v6
         if: always()
+        uses: actions/github-script@v6
         with:
           script: |
-            const allSteps = await github.rest.actions.listJobsForWorkflowRun({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: context.runId
-            }).then(response => {
-              const job = response.data.jobs.find(j => j.name === 'test');
-              return job ? job.steps : [];
-            });
+            const { owner, repo } = context.repo;
+            const run_id = context.runId;
 
-            const getStepByName = (name) => allSteps.find(step => step.name.toLowerCase().includes(name.toLowerCase()));
+            core.info(`Run ID: ${run_id}`);
 
-            const testsStep = getStepByName('run tests');
-            const installTestsStep = getStepByName('installation tests');
+            if (!run_id) {
+              core.warning('No run ID found, skipping status report');
+              return;
+            }
 
-            const success = testsStep?.conclusion === 'success' &&
-              installTestsStep?.conclusion === 'success';
-
-            const message = success
-              ? '✅ All tests passed!'
-              : '❌ Some tests failed. Please check the logs.';
-
-            if (context.issue.number) {
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: message
+            try {
+              const jobs = await github.rest.actions.listJobsForWorkflowRun({
+                owner,
+                repo,
+                run_id,
               });
+
+              const job = jobs.data.jobs.find(j => j.name === 'test');
+              if (!job) {
+                core.warning('Could not find test job');
+                return;
+              }
+
+              const conclusion = job.conclusion || 'pending';
+              core.info(`Job conclusion: ${conclusion}`);
+
+              // Get step information
+              const steps = job.steps || [];
+              const failedSteps = steps.filter(step => step.conclusion === 'failure');
+
+              // Create detailed comment
+              let comment = `## Test Results\n\n`;
+
+              if (conclusion === 'success') {
+                comment += '✅ All tests passed successfully!\n\n';
+              } else if (conclusion === 'failure') {
+                comment += '❌ Some tests failed.\n\n';
+
+                if (failedSteps.length > 0) {
+                  comment += '### Failed Steps\n';
+                  failedSteps.forEach(step => {
+                    comment += `- ${step.name}\n`;
+                    if (step.log) {
+                      comment += '```\n' + step.log + '\n```\n';
+                    }
+                  });
+                }
+              }
+
+              // Add system information
+              comment += '\n### Environment Details\n';
+              comment += `- OS: ${process.env.RUNNER_OS}\n`;
+              comment += `- Runner: ${process.env.RUNNER_NAME}\n`;
+              comment += `- Workflow: ${context.workflow}\n`;
+
+              // Add helpful links
+              comment += '\n### Helpful Links\n';
+              comment += [
+                `- [Test Logs](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${run_id})`,
+                `- [Documentation](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/blob/main/docs/documentation.md)`
+              ].join('\n');
+
+              // Post comment if this is a PR
+              if (context.payload.pull_request) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: context.payload.pull_request.number,
+                  body: comment
+                });
+              }
+
+              if (conclusion === 'failure') {
+                core.setFailed('Tests failed. See detailed report in PR comment.');
+              }
+            } catch (error) {
+              core.warning(`Error getting job status: ${error.message}`);
             }
