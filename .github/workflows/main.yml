@@ -1,4 +1,10 @@
-# ... existing workflow configuration ...
+---
+name: Main Workflow
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 jobs:
   validate:
