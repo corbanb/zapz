@@ -9,6 +9,11 @@ jobs:
   enforce-pr-rules:
     name: Enforce PR Rules
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
     steps:
       - name: Check PR Requirements
         uses: actions/github-script@v6
@@ -75,6 +80,10 @@ jobs:
   block-merge:
     name: Block Auto-Merge
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
     steps:
       - name: Check Auto-Merge
         uses: actions/github-script@v6

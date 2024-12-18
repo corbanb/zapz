@@ -28,18 +28,31 @@ jobs:
         run: |
           if ! git describe --tags > /dev/null 2>&1; then
             echo "has_tags=false" >> $GITHUB_OUTPUT
+            echo "next_version=v0.1.0" >> $GITHUB_OUTPUT
           else
             echo "has_tags=true" >> $GITHUB_OUTPUT
+            # Get latest tag and increment patch version
+            latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
+            current_version=${latest_tag#v}
+            major=$(echo $current_version | cut -d. -f1)
+            minor=$(echo $current_version | cut -d. -f2)
+            patch=$(echo $current_version | cut -d. -f3)
+            next_patch=$((patch + 1))
+            next_version="v$major.$minor.$next_patch"
+            echo "next_version=$next_version" >> $GITHUB_OUTPUT
           fi
 
-      - name: Create initial tag
-        if: steps.check_tags.outputs.has_tags == 'false'
+      - name: Configure Git
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          echo "Creating initial v0.1.0 tag"
-          git tag -a v0.1.0 -m "Initial release"
-          git push origin v0.1.0
+
+      - name: Create or Update Tag
+        if: steps.check_tags.outputs.has_tags == 'false'
+        run: |
+          echo "Creating initial ${{ steps.check_tags.outputs.next_version }} tag"
+          git tag -a ${{ steps.check_tags.outputs.next_version }} -m "Initial release"
+          git push origin ${{ steps.check_tags.outputs.next_version }}
 
       - name: Generate Changelog
         id: changelog
