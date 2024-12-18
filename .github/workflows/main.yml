@@ -6,30 +6,38 @@ on:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 
+permissions:
+  pull-requests: write
+  issues: write
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
 
+      - name: Install act
+        run: |
+          brew install act || true  # Don't fail if already installed
+
       - name: Run Validation
         id: validation
         run: |
-          ./test/run_actions.sh validate-pr "${{ github.event.pull_request.title }}"
+          RESULTS=$(./test/run_actions.sh validate-pr "${{ github.event.pull_request.title }}" || true)
+          echo "results<<EOF" >> $GITHUB_ENV
+          echo "$RESULTS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Comment on PR
         if: always()
         uses: actions/github-script@v6
         with:
           script: |
-            const output = process.env.VALIDATION_RESULTS;
-            const comment = output || '❌ Validation failed to produce results';
-
-            github.rest.issues.createComment({
+            const results = process.env.results || '❌ Validation failed to produce results';
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: comment.replace(/\\n/g, '\n')
+              body: results
             });
-        env:
-          VALIDATION_RESULTS: ${{ steps.validation.outputs.pr_comment }}
