@@ -188,24 +188,52 @@ fi
 
 validate_pr() {
     local TITLE="$1"
+    local RESULTS=""
+    local HAS_ERRORS=0
+
     echo "Checking PR title: $TITLE"
 
     # Check format
     if ! echo "$TITLE" | grep -E "^(feat|fix|docs|style|refactor|test|chore)\([a-z-]+\): .+$" > /dev/null; then
-        echo "❌ PR title must follow format: type(scope): description"
-        echo "Valid types: feat, fix, docs, style, refactor, test, chore"
-        echo "Example: feat(core): add new feature"
-        return 1
+        RESULTS+="❌ PR title must follow format: type(scope): description\n"
+        RESULTS+="Valid types: feat, fix, docs, style, refactor, test, chore\n"
+        RESULTS+="Example: feat(core): add new feature\n"
+        HAS_ERRORS=1
+    else
+        RESULTS+="✅ PR title format is valid\n"
     fi
 
     # Check length
     if [ ${#TITLE} -gt 72 ]; then
-        echo "❌ PR title must be 72 characters or less (current: ${#TITLE})"
-        return 1
+        RESULTS+="❌ PR title must be 72 characters or less (current: ${#TITLE})\n"
+        HAS_ERRORS=1
     fi
 
-    echo "✅ PR title format is valid"
-    return 0
+    # Run other checks and collect their results
+    if ! ./test/test.sh; then
+        RESULTS+="❌ Tests failed\n"
+        HAS_ERRORS=1
+    else
+        RESULTS+="✅ Tests passed\n"
+    fi
+
+    if ! ./test/run_actions.sh local lint; then
+        RESULTS+="❌ Linting failed\n"
+        HAS_ERRORS=1
+    else
+        RESULTS+="✅ Linting passed\n"
+    fi
+
+    # Output all results at once
+    echo -e "$RESULTS"
+
+    if [ $HAS_ERRORS -eq 1 ]; then
+        echo "::set-output name=pr_comment::$RESULTS"
+        return 1
+    else
+        echo "::set-output name=pr_comment::✅ All PR requirements met!\n$RESULTS"
+        return 0
+    fi
 }
 
 # Main function

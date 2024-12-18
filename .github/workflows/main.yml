@@ -1,0 +1,29 @@
+# ... existing workflow configuration ...
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run Validation
+        id: validation
+        run: |
+          ./test/run_actions.sh validate-pr "${{ github.event.pull_request.title }}"
+
+      - name: Comment on PR
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const output = process.env.VALIDATION_RESULTS;
+            const comment = output || '❌ Validation failed to produce results';
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment.replace(/\\n/g, '\n')
+            });
+        env:
+          VALIDATION_RESULTS: ${{ steps.validation.outputs.pr_comment }}
