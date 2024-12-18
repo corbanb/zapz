@@ -93,6 +93,106 @@ check_dependencies() {
     fi
 }
 
+# Test version handling
+test_version_handling() {
+    local test_dir
+    test_dir=$(mktemp -d)
+    local failed_tests=0
+
+    # Setup test git repo
+    (
+        cd "$test_dir" || exit 1
+        git init
+        git config --local user.email "test@example.com"
+        git config --local user.name "Test User"
+        git config --local init.defaultBranch main
+        echo "# Test Repo" > README.md
+        git add README.md
+        git commit -m "Initial commit"
+    )
+
+    # Test initial tag creation
+    run_test "Initial tag creation (v0.1.0)" \
+        "(cd \"$test_dir\" && \
+         ! git tag | grep -q '^v' && \
+         git tag -a v0.1.0 -m 'Initial release' && \
+         git tag | grep -q '^v0.1.0$')" || ((failed_tests++))
+
+    # Test version increment scenarios
+    local version_tests=(
+        "v0.1.0:v0.1.1"     # Basic increment
+        "v1.0.0:v1.0.1"     # Major version
+        "v0.9.9:v0.9.10"    # Double digit increment
+        "v1.9.99:v1.9.100"  # Triple digit increment
+        "v2.0.0-beta:v2.0.1" # Pre-release version
+    )
+
+    for test_case in "${version_tests[@]}"; do
+        local current_version="${test_case%%:*}"
+        local expected_version="${test_case#*:}"
+
+        # Clean previous tags
+        (cd "$test_dir" && git tag | xargs git tag -d >/dev/null 2>&1)
+
+        # Test version increment
+        run_test "Version increment from $current_version to $expected_version" \
+            "(cd \"$test_dir\" && \
+             git tag -a \"$current_version\" -m 'Test version' && \
+             latest_tag=\$(git tag -l \"v*\" | sort -V | tail -n1) && \
+             current_version=\${latest_tag#v} && \
+             major=\$(echo \$current_version | cut -d. -f1) && \
+             minor=\$(echo \$current_version | cut -d. -f2) && \
+             patch=\$(echo \$current_version | cut -d. -f3 | cut -d- -f1) && \
+             next_patch=\$((patch + 1)) && \
+             next_version=\"v\$major.\$minor.\$next_patch\" && \
+             [ \"\$next_version\" = \"$expected_version\" ])" || ((failed_tests++))
+    done
+
+    # Clean tags for sorting test
+    (cd "$test_dir" && git tag | xargs git tag -d >/dev/null 2>&1)
+
+    # Test version sorting with mixed versions
+    (cd "$test_dir" || exit 1
+     # Create tags in random order
+     git tag -a v0.2.0 -m "Test version"
+     git tag -a v0.1.0 -m "Test version"
+     git tag -a v0.10.0 -m "Test version"
+     git tag -a v1.0.0-beta -m "Test version"
+     git tag -a v1.0.0 -m "Test version"
+    )
+
+    run_test "Version sorting handles mixed versions correctly" \
+        "(cd \"$test_dir\" && \
+         latest_tag=\$(git tag -l \"v*\" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1) && \
+         echo \"Latest tag: \$latest_tag\" && \
+         [ \"\$latest_tag\" = \"v1.0.0\" ])" || ((failed_tests++))
+
+    # Clean tags for duplicate test
+    (cd "$test_dir" && git tag | xargs git tag -d >/dev/null 2>&1)
+
+    # Test duplicate tag prevention
+    run_test "Prevents duplicate tag creation" \
+        "(cd \"$test_dir\" && \
+         git tag -a v0.1.0 -m 'Test version' && \
+         ! git tag -a v0.1.0 -m 'Duplicate tag' 2>/dev/null)" || ((failed_tests++))
+
+    # Clean tags for invalid version test
+    (cd "$test_dir" && git tag | xargs git tag -d >/dev/null 2>&1)
+
+    # Test invalid version handling
+    run_test "Handles invalid version tags" \
+        "(cd \"$test_dir\" && \
+         git tag -a v1.0.0 -m 'Valid version' && \
+         git tag -a vinvalid -m 'Invalid version' && \
+         latest_tag=\$(git tag -l \"v*\" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | sort -V | tail -n1) && \
+         [ \"\$latest_tag\" = \"v1.0.0\" ])" || ((failed_tests++))
+
+    # Cleanup
+    rm -rf "$test_dir"
+
+    return "$failed_tests"
+}
+
 # Run all tests
 main() {
     local failed_tests=0
@@ -180,6 +280,11 @@ main() {
 
     run_test "Secrets file is in gitignore" \
         "grep -q '^\.secrets$' \"$PROJECT_ROOT/.gitignore\"" || ((failed_tests++))
+
+    # Run version handling tests
+    log_header "Running Version Handling Tests"
+    test_version_handling
+    failed_tests=$((failed_tests + $?))
 
     # Print detailed summary
     print_test_summary "$failed_tests"
