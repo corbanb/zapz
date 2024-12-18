@@ -152,9 +152,10 @@ jobs:
 
               // Add helpful links
               comment += '\n### Helpful Links\n';
+              const configPath = 'blob/main/docs/configuration.md';
               const links = [
                 `- [Installation Logs](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${run_id})`,
-                `- [Configuration Guide](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/blob/main/docs/configuration.md)`
+                `- [Configuration Guide](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/${configPath})`
               ];
               comment += links.join('\n');
 
