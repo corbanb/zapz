@@ -7,25 +7,50 @@ on:
     - cron: '0 0 * * 0'  # Weekly on Sundays at midnight
   workflow_dispatch:
 
+# Add concurrency group to prevent overlapping runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test-install:
-    name: Test on macOS ${{ matrix.os-version }}
+  # Quick test on primary version for PRs
+  test-install-quick:
+    if: github.event_name == 'pull_request'
+    name: Quick Test (macOS Latest)
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Installation Test
+        run: |
+          chmod +x ./install.sh
+          ./install.sh
+
+  # Full matrix test for scheduled runs and manual triggers
+  test-install-full:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    name: Full Test on macOS ${{ matrix.os-version }}
     runs-on: macos-${{ matrix.os-version }}
+    timeout-minutes: 15
     strategy:
       matrix:
         os-version: [monterey, ventura, sonoma]
+      # Run tests in parallel but don't fail fast
+      max-parallel: 1
       fail-fast: false
 
     steps:
       - uses: actions/checkout@v3
 
       - name: Clean Environment
+        timeout-minutes: 2
         run: |
           rm -rf ~/Library/Developer/Xcode/DerivedData
           rm -rf ~/.local/bin/zapz
           rm -rf ~/.zapz_update_check
 
       - name: Setup Config
+        timeout-minutes: 2
         run: |
           # Create all required directories
           mkdir -p ~/.local/bin/mac-setup/config
@@ -47,12 +72,14 @@ jobs:
           fi
 
       - name: Test Installation
+        timeout-minutes: 8
         run: |
           chmod +x ./install.sh
           ./install.sh
 
       - name: Report Status
         if: always()
+        timeout-minutes: 1
         uses: actions/github-script@v6
         with:
           script: |
@@ -73,7 +100,7 @@ jobs:
                 run_id,
               });
 
-              const job = jobs.data.jobs.find(j => j.name.startsWith('Test on macOS'));
+              const job = jobs.data.jobs.find(j => j.name.includes('macOS'));
               if (!job) {
                 core.warning('Could not find test job');
                 return;
@@ -108,12 +135,14 @@ jobs:
               // Add test matrix information
               comment += '\n### Test Matrix\n';
               comment += `- macOS Version: ${process.env.MATRIX_OS_VERSION}\n`;
+              comment += `- Test Type: ${github.event_name === 'pull_request' ? 'Quick Test' : 'Full Matrix Test'}\n`;
 
               // Add system information
               comment += '\n### Environment Details\n';
               comment += `- OS: ${process.env.RUNNER_OS}\n`;
               comment += `- Runner: ${process.env.RUNNER_NAME}\n`;
               comment += `- Workflow: ${context.workflow}\n`;
+              comment += `- Event: ${github.event_name}\n`;
 
               // Add troubleshooting section
               comment += '\n### Troubleshooting\n';
@@ -125,8 +154,7 @@ jobs:
               comment += '\n### Helpful Links\n';
               const links = [
                 `- [Installation Logs](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${run_id})`,
-                `- [Configuration Guide](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/blob/main/docs/` +
-                'configuration.md)'
+                `- [Configuration Guide](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/blob/main/docs/configuration.md)`
               ];
               comment += links.join('\n');
 
