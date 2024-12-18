@@ -26,3 +26,12 @@ config/*.local.yml
 
 # Internal documentation
 .docs/
+
+# Jekyll files
+docs/_site/
+docs/.sass-cache/
+docs/vendor/
+docs/.bundle/
+docs/.jekyll-cache/
+docs/.jekyll-metadata
+.jekyll-cache/
