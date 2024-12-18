@@ -1,52 +1,37 @@
 ---
-layout: default
-title: Node.js Development Setup
-permalink: /recipes/node
+layout: docs
+title: Node.js Development
+icon: fab fa-node-js
+description: Configure your Node.js development environment
 ---
-
-# Node.js Development Environment
-
-A complete setup for Node.js development with zapz.
 
 ## Quick Setup
 
-```bash
-zapz --recipe node
-```
+<div class="feature-card text-center mb-8">
+  <div class="feature-icon">
+    <i class="fas fa-bolt text-2xl text-secondary"></i>
+  </div>
+  <h3 class="text-xl font-semibold text-white mb-2">Node.js Development Stack</h3>
+  <p class="text-gray-400">Complete Node.js development environment with one command.</p>
+  ```bash
+  zapz setup --preset node
+  ```
+</div>
 
 ## What's Included
 
-- Node.js (via nvm)
-- pnpm
-- TypeScript
-- ESLint
-- Prettier
-- VS Code Extensions
-- Git Hooks
+<div class="tools-grid">
+  <div class="feature-card">
+    <div class="feature-icon">
+      <i class="fab fa-node-js text-2xl text-secondary"></i>
+    </div>
+    <h3 class="text-xl font-semibold text-white mb-2">Runtime</h3>
+    <ul class="space-y-2 text-gray-400">
+      <li>Node.js via nvm</li>
+      <li>Latest LTS version</li>
+      <li>Yarn package manager</li>
+    </ul>
+  </div>
 
-## Configuration
-
-```yaml
-node:
-  versions:
-    - "lts/iron"      # Node.js 20
-    - "lts/hydrogen"  # Node.js 18
-  default: "lts/iron"
-  global_packages:
-    - "pnpm"
-    - "typescript"
-    - "ts-node"
-    - "nodemon"
-
-vscode:
-  extensions:
-    - "dbaeumer.vscode-eslint"
-    - "esbenp.prettier-vscode"
-    - "christian-kohler.npm-intellisense"
-
-git:
-  hooks:
-    pre_commit: 
-      - "lint-staged"
-      - "prettier"
-``` 
+  <!-- Add more cards for Tools, IDE Setup, etc. -->
+</div>

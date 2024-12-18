@@ -30,8 +30,18 @@ config/*.local.yml
 # Jekyll files
 docs/_site/
 docs/.sass-cache/
-docs/vendor/
-docs/.bundle/
 docs/.jekyll-cache/
 docs/.jekyll-metadata
-.jekyll-cache/
+docs/vendor/
+docs/.bundle/
+.bundle/
+vendor/
+.ruby-version
+
+# Node
+node_modules/
+.env
+.env.local
+
+# System
+*.log

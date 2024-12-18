@@ -1,0 +1,321 @@
+/* Docs-specific styles */
+.docs-content {
+  // Card overrides
+  .feature-card h3,
+  .tool-card h3,
+  .next-step-card h3 {
+    @apply p-0 mt-0;
+    &::before {
+      display: none;
+    }
+  }
+
+  // Feature cards
+  .feature-card {
+    @apply bg-dark-lighter p-6 rounded-lg border border-gray-700 hover:-translate-y-1 transition-all;
+
+    .feature-icon {
+      @apply w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4;
+      i {
+        @apply text-2xl text-secondary;
+      }
+    }
+
+    h3 {
+      @apply text-xl font-semibold text-white mb-2;
+    }
+
+    p {
+      @apply text-gray-400 m-0;
+    }
+  }
+
+  // Tool cards
+  .tool-card {
+    @apply bg-dark-lighter p-6 rounded-lg border border-gray-700 hover:-translate-y-1 transition-all;
+
+    h4 {
+      @apply text-lg font-semibold text-white mb-4 flex items-center;
+      i {
+        @apply text-secondary mr-3;
+      }
+    }
+
+    ul {
+      @apply space-y-3 m-0;
+      li {
+        @apply flex items-center text-gray-300;
+      }
+    }
+  }
+}
+
+// Docs-specific layouts
+.features-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 bg-dark-lighter p-8 rounded-xl;
+}
+
+.tools-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-6 mb-12;
+}
+
+.next-steps-grid {
+  @apply grid grid-cols-1 md:grid-cols-3 gap-6 mt-8;
+}
+
+// Quick install section
+.quick-install {
+  @apply bg-dark-lighter rounded-xl p-8 mb-12;
+
+  .header {
+    @apply flex items-center space-x-4 mb-6;
+
+    .icon {
+      @apply w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center;
+      i {
+        @apply text-2xl text-secondary;
+      }
+    }
+
+    .text {
+      h2 {
+        @apply text-2xl font-bold text-white m-0;
+      }
+      p {
+        @apply text-gray-400 m-0;
+      }
+    }
+  }
+
+  .code {
+    @apply bg-dark rounded-lg p-4;
+    pre {
+      @apply m-0;
+    }
+  }
+}
+
+// Rich content components
+.guides-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-6 mb-12;
+
+  .guide-card {
+    @apply bg-dark-lighter p-6 rounded-xl border border-gray-700 flex items-start gap-6 hover:-translate-y-1 transition-all no-underline;
+
+    .guide-icon {
+      @apply w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0;
+      i {
+        @apply text-2xl text-secondary;
+      }
+    }
+
+    .guide-content {
+      h3 {
+        @apply text-xl font-semibold text-white mb-2;
+      }
+
+      p {
+        @apply text-gray-400 mb-4;
+      }
+
+      .guide-time {
+        @apply text-sm text-gray-500 flex items-center gap-2;
+      }
+    }
+  }
+}
+
+.command-section {
+  @apply bg-dark-lighter rounded-xl p-8 mb-12;
+
+  .command-group {
+    h3 {
+      @apply text-xl font-semibold text-white mb-6 flex items-center gap-3;
+      &::before {
+        display: none;
+      }
+    }
+
+    .command-list {
+      @apply space-y-4;
+
+      .command-item {
+        @apply bg-dark rounded-lg p-4;
+
+        code {
+          @apply text-primary text-lg mb-2 block;
+        }
+
+        p {
+          @apply text-gray-400 text-sm mb-3;
+        }
+
+        .command-tags {
+          @apply flex gap-2;
+
+          .tag {
+            @apply px-2 py-1 rounded-full text-xs bg-primary/10 text-primary;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Enhanced quick install
+.quick-install {
+  @apply bg-gradient-to-br from-dark-lighter to-dark border border-gray-700 rounded-xl p-8 mb-12 relative overflow-hidden;
+
+  &::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-primary/5 to-secondary/5 pointer-events-none;
+  }
+
+  .header {
+    @apply relative z-10;
+  }
+
+  .code {
+    @apply relative z-10;
+  }
+}
+
+// Enhanced feature cards
+.feature-card {
+  @apply relative;
+
+  &::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-lg pointer-events-none;
+  }
+
+  .feature-icon {
+    @apply relative z-10;
+  }
+}
+
+// Configuration page styles
+.config-intro {
+  @apply bg-gradient-to-br from-dark-lighter to-dark border border-gray-700 rounded-xl p-8 mb-12;
+
+  .config-file {
+    @apply relative;
+
+    .file-header {
+      @apply flex items-center gap-3 text-gray-400 mb-4;
+      i {
+        @apply text-secondary;
+      }
+    }
+  }
+}
+
+.config-sections {
+  @apply space-y-12;
+
+  .config-section {
+    @apply bg-dark-lighter rounded-xl border border-gray-700 overflow-hidden;
+
+    .section-header {
+      @apply flex items-center gap-4 p-6 border-b border-gray-700 bg-gradient-to-r from-dark to-dark-lighter;
+
+      i {
+        @apply text-2xl text-secondary;
+      }
+
+      h3 {
+        @apply m-0 p-0;
+        &::before {
+          display: none;
+        }
+      }
+    }
+
+    .section-content {
+      @apply p-6;
+
+      .config-example {
+        @apply my-6;
+        pre {
+          @apply m-0;
+        }
+      }
+
+      .config-options {
+        @apply grid gap-6;
+
+        .option {
+          @apply bg-dark rounded-lg p-4;
+
+          code {
+            @apply text-primary text-lg mb-2 block;
+          }
+
+          p {
+            @apply text-gray-400 text-sm mb-3;
+          }
+
+          .option-meta {
+            @apply flex gap-2;
+
+            .tag {
+              @apply px-2 py-1 rounded-full text-xs;
+              &:first-child {
+                @apply bg-primary/10 text-primary;
+              }
+            }
+
+            .type {
+              @apply bg-gray-700/50 text-gray-300 px-2 py-1 rounded-full text-xs;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+.apps-grid {
+  @apply grid grid-cols-2 md:grid-cols-4 gap-4 mt-6;
+
+  .app-card {
+    @apply bg-dark rounded-lg p-4 flex flex-col items-center gap-2 text-center;
+
+    i {
+      @apply text-2xl text-secondary;
+    }
+
+    span {
+      @apply text-sm text-gray-400;
+    }
+  }
+}
+
+.tips-section {
+  @apply space-y-6;
+
+  .tip {
+    @apply bg-dark-lighter rounded-xl p-6 flex gap-6;
+
+    .tip-icon {
+      @apply w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0;
+      i {
+        @apply text-2xl text-secondary;
+      }
+    }
+
+    .tip-content {
+      h4 {
+        @apply text-lg font-semibold text-white mb-2;
+      }
+
+      p {
+        @apply text-gray-400 mb-4;
+      }
+
+      pre {
+        @apply m-0;
+      }
+    }
+  }
+}

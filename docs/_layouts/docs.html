@@ -1,0 +1,72 @@
+---
+layout: default
+---
+
+<div class="bg-dark-darker py-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center">
+      <h1 class="text-4xl font-bold text-white">
+        {% if page.icon %}
+          <i class="{{ page.icon }} text-secondary mr-2"></i>
+        {% endif %}
+        {{ page.title }}
+      </h1>
+      {% if page.description %}
+        <p class="mt-4 text-xl text-gray-400">{{ page.description }}</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+    <!-- Sidebar -->
+    <div class="lg:col-span-1">
+      <div class="sticky top-24 space-y-8 bg-dark-lighter p-6 rounded-xl border border-gray-700">
+        <div>
+          <h3 class="text-lg font-semibold text-white mb-4">Documentation</h3>
+          <ul class="space-y-2">
+            <li>
+              <a href="{{ site.baseurl }}/docs/" class="text-gray-400 hover:text-white transition-colors">
+                Getting Started
+              </a>
+            </li>
+            <li>
+              <a href="{{ site.baseurl }}/docs/configuration/" class="text-gray-400 hover:text-white transition-colors">
+                Configuration
+              </a>
+            </li>
+            <li>
+              <a href="{{ site.baseurl }}/docs/recipes/" class="text-gray-400 hover:text-white transition-colors">
+                Recipes
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="text-lg font-semibold text-white mb-4">Examples</h3>
+          <ul class="space-y-2">
+            <li>
+              <a href="{{ site.baseurl }}/docs/examples/node/" class="text-gray-400 hover:text-white transition-colors">
+                Node.js Setup
+              </a>
+            </li>
+            <li>
+              <a href="{{ site.baseurl }}/docs/examples/team/" class="text-gray-400 hover:text-white transition-colors">
+                Team Configuration
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main content -->
+    <div class="lg:col-span-3 bg-dark-lighter p-12 lg:p-16 rounded-xl border border-gray-700">
+      <div class="prose prose-invert max-w-none docs-content">
+        {{ content }}
+      </div>
+    </div>
+  </div>
+</div>

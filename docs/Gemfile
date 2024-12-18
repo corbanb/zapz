@@ -1,19 +1,11 @@
 source "https://rubygems.org"
 
-# Lock github-pages gem version to ensure compatibility
-gem "github-pages", "~> 232", group: :jekyll_plugins
-
-# Plugin versions that are known to work together
-group :jekyll_plugins do
-  gem "jekyll-remote-theme", "~> 0.4.3"
-  gem "jekyll-seo-tag", "~> 2.8.0"
-  gem "jekyll-sitemap", "~> 1.4.0"
-end
-
-# Dependencies with version constraints
-gem "rubyzip", "~> 2.3.0"  # Lock to avoid 3.0 breaking changes
-gem "nokogiri", "~> 1.16.2"  # Version required by github-pages
-gem "commonmarker", "~> 0.23.10"  # Required by github-pages
+gem "jekyll", "3.9.3"
+gem "github-pages", "228"
+gem "webrick", "~> 1.8"
+gem "jekyll-remote-theme"
+gem "jekyll-seo-tag"
+gem "jekyll-sitemap"
 
 # Windows and JRuby does not include zoneinfo files
 platforms :mingw, :x64_mingw, :mswin, :jruby do
@@ -21,17 +13,5 @@ platforms :mingw, :x64_mingw, :mswin, :jruby do
   gem "tzinfo-data"
 end
 
-# Performance-booster for watching directories on Windows
-gem "wdm", "~> 0.1.1", :platforms => [:mingw, :x64_mingw, :mswin]
-
 # Lock http_parser.rb for JRuby
 gem "http_parser.rb", "~> 0.6.0", :platforms => [:jruby]
-
-# Required for Ruby 3.0+
-gem "webrick", "~> 1.8.1"
-
-# Development dependencies
-group :development do
-  gem "rake", "~> 13.0"
-  gem "rspec", "~> 3.12"
-end

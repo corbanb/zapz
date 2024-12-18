@@ -1,0 +1,40 @@
+// Code block container styles
+pre[class*="language-"] {
+  margin: 1.5rem 0;
+  border-radius: 8px;
+  max-height: 500px;
+}
+
+// Custom styles for inline code
+:not(pre) > code {
+  background: #F3F4F6;
+  color: #1F2937;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+// Copy button styles
+.copy-to-clipboard-button {
+  background: rgba(255,255,255,0.1) !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
+  border-radius: 4px !important;
+  color: #e5e7eb !important;
+
+  &:hover {
+    background: rgba(255,255,255,0.2) !important;
+  }
+}
+
+// Language label styles
+pre[class*="language-"]::before {
+  content: attr(data-language);
+  display: block;
+  background: rgba(255,255,255,0.1);
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+  color: #9CA3AF;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+}

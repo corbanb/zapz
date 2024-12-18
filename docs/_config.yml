@@ -1,22 +1,33 @@
 ---
 # Site settings
-title: zapz
-tagline: Zero-dependency macOS development environment setup
-description: A powerful CLI tool for setting up macOS development environments with best practices and modern tooling.
+title: "⚡️ zapz"
+description: "Set up your Mac for development in minutes, not hours"
 baseurl: "/zapz"
 url: "https://corbanb.github.io"
 repository: "corbanb/zapz"
 
+# Theme settings
+remote_theme: pages-themes/cayman@v0.2.0
+theme_color: "#4F46E5"
+
 # Build settings
 markdown: kramdown
-theme: jekyll-theme-cayman
-remote_theme: pages-themes/cayman@v0.2.0
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: 'highlight'
+    span:
+      line_numbers: false
+    block:
+      line_numbers: false
+
 plugins:
   - jekyll-remote-theme
   - jekyll-seo-tag
   - jekyll-sitemap
 
-# Theme settings
+# Theme customization
 show_downloads: true
 github:
   is_project_page: true
@@ -25,53 +36,6 @@ github:
   tar_url: https://github.com/corbanb/zapz/tarball/main
   owner_name: corbanb
   owner_url: https://github.com/corbanb
-
-# Navigation structure
-navigation:
-  - title: Getting Started
-    url: /
-    children:
-      - title: Quick Start
-        url: /#quick-start
-      - title: Installation
-        url: /#installation
-      - title: Prerequisites
-        url: /#prerequisites
-  - title: Documentation
-    url: /docs/
-    children:
-      - title: Usage Guide
-        url: /docs/usage
-      - title: Configuration
-        url: /docs/configuration
-      - title: Examples
-        url: /docs/examples
-  - title: Development
-    url: /development/
-    children:
-      - title: Contributing
-        url: /development/contributing
-      - title: Testing
-        url: /development/testing
-      - title: GitHub Actions
-        url: /development/actions
-  - title: Reference
-    url: /reference/
-    children:
-      - title: CLI Commands
-        url: /reference/cli
-      - title: Configuration Options
-        url: /reference/config
-      - title: API Documentation
-        url: /reference/api
-
-# Social links
-social:
-  github: corbanb/zapz
-  twitter: corbanb
-
-# Analytics (if needed)
-google_analytics: # UA-XXXXXXXX-X
 
 # Footer content
 footer:
@@ -83,3 +47,11 @@ footer:
       url: https://github.com/corbanb/zapz/issues
     - title: Releases
       url: https://github.com/corbanb/zapz/releases
+
+# SEO and social
+social:
+  github: corbanb/zapz
+  twitter: corbanb
+
+# Analytics (if needed)
+google_analytics: # UA-XXXXXXXX-X
