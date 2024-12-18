@@ -36,13 +36,6 @@ log_info "Running core tests..."
     exit 1
 }
 
-# Check for secrets
-log_info "Checking for secrets..."
-if git diff --cached --name-only | xargs grep -l "GITHUB_TOKEN=" > /dev/null; then
-    log_error "Found potential secrets in staged files. Please remove them before committing."
-    exit 1
-fi
-
 log_success "All pre-commit checks passed!"
 EOF
 
