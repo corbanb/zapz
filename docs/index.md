@@ -1,258 +1,554 @@
+<div align="center">
+
+# ⚡️ zapz
+
+The zero-dependency macOS development environment setup tool.
+
+[![Version](https://img.shields.io/github/v/release/corbanb/zapz?include_prereleases&label=version)](https://github.com/corbanb/zapz/releases)
+[![Tests](https://github.com/corbanb/macos-setup/actions/workflows/test.yml/badge.svg)](https://github.com/corbanb/macos-setup/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![macOS](https://img.shields.io/badge/macOS-Monterey%2B-brightgreen)]()
+[![Documentation](https://img.shields.io/badge/docs-corbanb.github.io%2Fzapz-blue)](https://corbanb.github.io/zapz)
+
+[📖 Documentation](https://corbanb.github.io/zapz) | [🚀 Quick Start](#quick-start) | [⚙️ Configuration](#configuration) | [🔍 Examples](https://corbanb.github.io/zapz/examples)
+
+</div>
+
 ---
-layout: default
-title: zapz
-description: Set up your Mac for development in minutes, not hours
+
+## 🎯 Overview
+
+`zapz` automates the setup of a macOS development environment with a single command. It's perfect for:
+- Setting up a new Mac
+- Resetting development environments
+- Maintaining consistent setups across teams
+- Backing up and restoring development configurations
+
+📚 **[Full Documentation Available Here](https://corbanb.github.io/zapz)**
+
+## ✨ Features
+
+- 🔧 **Zero Dependencies**: Works on a fresh macOS installation
+- 🎛 **Fully Configurable**: Via YAML or GitHub Gist
+- 🔄 **Smart Updates**: Automatic update notifications and easy updating
+- 🛡 **Safe Execution**: Idempotent operations, run multiple times safely
+- 📝 **Detailed Logging**: Verbose output and error handling
+- 🔔 **Update Notifications**: Get notified of new versions when opening your terminal
+
+### What Gets Installed
+
+<details>
+<summary>Click to expand installed components</summary>
+
+#### Core Development Tools
+- ⚙️ Xcode Command Line Tools
+- 🍺 Homebrew
+- 📦 Git & GitHub CLI
+- 🟩 Node.js (via nvm)
+- 🏃 Bun & Deno
+- 💻 VS Code
+- 🖥 iTerm2
+
+#### Applications
+- 🌐 Arc Browser
+- 🎨 Figma
+- ⌨️ Cursor
+- 💬 Slack
+- 🎵 Spotify
+- 🔒 1Password
+
+#### Development Environment
+- SSH key generation
+- Git configuration
+- Shell preferences
+- macOS system settings
+</details>
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+First time setup:
+```bash
+# Make scripts executable (one-time setup)
+chmod +x setup.sh test/test.sh lib/modules/*.sh
+```
+
+The tool requires these dependencies:
+```bash
+# Install with Homebrew
+brew install yq        # YAML processor
+brew install shellcheck  # Shell script linter (optional, for development)
+```
+
+### Option 1: One-line Installation
+```bash
+curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | bash
+```
+
+This will:
+- Install the tool to `~/.local/bin/mac-setup`
+- Create a `zapz` command in your PATH
+- Set up auto-updates
+- Install required dependencies if missing
+
+### Option 2: Manual Installation
+```bash
+# Clone the repository
+git clone https://github.com/corbanb/zapz.git
+cd zapz
+
+# Install
+./install.sh
+```
+
+### Usage
+```bash
+# Show help
+zapz --help
+
+# Run with default settings
+zapz
+
+# Run with custom config
+zapz -c path/to/config.yml
+```
+
+## 📖 Usage Guide
+
+### Basic Usage
+
+```bash
+./setup.sh                    # Run with default settings
+./setup.sh --verbose         # Run with detailed output
+./setup.sh --force          # Force reinstall all components
+```
+
+### Advanced Options
+
+```bash
+Usage: setup.sh [OPTIONS]
+
+Options:
+    -h, --help              Show this help message
+    -v, --verbose          Enable verbose output
+    -f, --force            Force reinstallation of components
+    -c, --config FILE      Use custom config file
+    -g, --gist URL         Use settings from a GitHub Gist URL
+    --skip-macos          Skip macOS preferences setup
+    --skip-cron           Skip cron job setup
+```
+
+## ⚙️ Configuration
+
+### Using Custom Configuration
+
+1. Create your configuration:
+```bash
+cp config/default.yml config/custom.yml
+```
+
+2. Edit to match your preferences:
+```yaml
+# custom.yml
+git:
+  user:
+    name: "Your Name"
+    email: "your.email@example.com"
+  editor: "code --wait"
+
+node:
+  versions:
+    - "lts/hydrogen"
+    - "lts/iron"
+  default: "lts/iron"
+  global_packages:
+    - "pnpm"
+    - "typescript"
+```
+
+3. Run with your config:
+```bash
+./setup.sh -c config/custom.yml
+```
+
+### Using GitHub Gist
+
+1. Create a Gist with your configuration
+2. Get the raw URL of your Gist
+3. Run setup with your Gist:
+```bash
+./setup.sh -g https://gist.raw.githubusercontent.com/user/gistid/file
+```
+
+<details>
+<summary>Example Gist Configuration</summary>
+
+```yaml
+# Example configuration for web development
+homebrew:
+  taps:
+    - "homebrew/cask"
+    - "homebrew/cask-fonts"
+  formulas:
+    - "git"
+    - "gh"
+    - "node"
+    - "yarn"
+  casks:
+    - "visual-studio-code"
+    - "docker"
+    - "figma"
+
+node:
+  versions:
+    - "lts/iron"
+  global_packages:
+    - "typescript"
+    - "next"
+
+git:
+  user:
+    name: "Your Name"
+    email: "your.email@example.com"
+  editor: "code --wait"
+
+macos:
+  dock:
+    autohide: true
+    magnification: true
+  keyboard:
+    key_repeat: 2
+    initial_key_repeat: 15
+```
+</details>
+
+## 🔄 Maintenance
+
+### Automatic Updates
+
+zapz provides two ways to stay up-to-date:
+
+1. **Terminal Notifications**
+- Checks for updates when you open a new terminal
+- Shows notifications only once per day
+- Provides direct update commands
+
+```bash
+# Example notification
+🔔 A new version of zapz is available: v0.2.0
+   Current version: v0.1.0
+   Run 'zapz --update' to update
+```
+
+2. **Cron Jobs** that:
+- Runs on your configured schedule (daily/weekly/monthly)
+- Updates Homebrew packages
+- Updates npm global packages
+- Runs system health checks
+- Sends desktop notifications
+
+#### Update Configuration
+
+Configure updates in your `config.yml`:
+```yaml
+cron:
+  update_schedule:
+    enabled: true
+    frequency: "daily"    # daily, weekly, or monthly
+    time: "00:00"        # When to run (24h format)
+    days: ["Sunday"]     # For weekly updates
+  terminal_update:
+    enabled: true        # Check when opening terminal
+    frequency: 86400     # Minimum seconds between checks
+
+cli:
+  alias: "zapz"         # Your preferred command alias
+  auto_alias: true      # Add alias automatically
+```
+
+### Manual Updates
+
+```bash
+# Check for updates
+zapz --version
+
+# Update zapz
+zapz --update
+
+# Force update
+zapz --update --force
+```
+
+### Disabling Update Notifications
+
+If you prefer not to see update notifications, you can:
+
+1. **Disable in config**:
+```yaml
+cli:
+  update_notifications: false
+```
+
+2. **Disable temporarily**:
+```bash
+# Add to your shell RC file
+export ZAPZ_DISABLE_UPDATE_CHECK=1
+```
+
+3. **Remove from shell RC**:
+```bash
+# Edit your .zshrc or .bashrc and remove or comment out:
+# zapz update check
+```
+
+## 🛠 Development
+
+### Development Dependencies
+
+Additional dependencies for development:
+```bash
+brew install shellcheck  # Shell script linter
+```
+
+### Running Tests
+
+The project includes a comprehensive test suite that verifies both core functionality and installation processes.
+
+#### Prerequisites
+```bash
+# Required dependencies
+brew install yq          # YAML processor
+brew install shellcheck  # Shell script linter
+```
+
+#### Running the Test Suite
+```bash
+# Run all tests
+./test/run_tests.sh
+
+# Run individual test suites
+./test/test.sh         # Run core tests
+./test/test_install.sh # Run installation tests
+
+# Run syntax checker
+shellcheck setup.sh lib/**/*.sh test/*.sh
+```
+
+#### Test Categories
+
+The test suite includes:
+
+1. **Core Tests** (`test.sh`)
+   - Module loading and syntax validation
+   - Configuration file validation
+   - Utility function testing
+   - Directory structure verification
+
+2. **Installation Tests** (`test_install.sh`)
+   - Clean installation process
+   - Update scenarios
+   - File permissions
+   - PATH configuration
+   - Dependency management
+
+#### Continuous Integration
+
+GitHub Actions automatically runs the full test suite:
+- On every push to main branch
+- For all pull requests
+- Tests run on macOS latest
+
+#### Test Output Example
+
+```bash
+=== Running All Tests ===
+Running test.sh...
+✓ Core tests passed
+
+Running test_install.sh...
+✓ Installation tests passed
+
+=== All test suites passed ===
+```
+
+#### Adding New Tests
+
+To add new tests:
+1. Choose the appropriate test file (`test.sh` or `test_install.sh`)
+2. Add your test using the `run_test` function:
+    ```bash
+    run_test "Description of your test" \
+        "command_to_test" || ((failed_tests++))
+    ```
+3. Run the test suite to verify
+
+### Running GitHub Actions
+
+You can run GitHub Actions workflows in two ways:
+
+#### 1. Local Testing with `act`
+
+Run workflows locally using Docker containers:
+```bash
+# Install act
+brew install act
+
+# Run specific workflow
+./test/run_actions.sh local lint
+./test/run_actions.sh local test
+./test/run_actions.sh local install
+
+# Run all workflows
+./test/run_actions.sh local all
+```
+
+Benefits:
+- Fast feedback loop
+- No GitHub Actions minutes consumed
+- Works offline
+- Great for development and debugging
+
+Limitations:
+- Can't perfectly simulate macOS environments
+- Some GitHub features unavailable
+- Environment differences may exist
+
+#### 2. Remote Testing with GitHub CLI
+
+Run workflows on GitHub's infrastructure:
+```bash
+# Install GitHub CLI
+brew install gh
+gh auth login
+
+# Run specific workflow
+./test/run_actions.sh remote lint
+./test/run_actions.sh remote test
+./test/run_actions.sh remote install
+
+# Run all workflows
+./test/run_actions.sh remote all
+```
+
+Benefits:
+- Tests in real GitHub environment
+- Full macOS support
+- All GitHub features available
+- Exact production environment
+
+Limitations:
+- Consumes GitHub Actions minutes
+- Requires internet connection
+- May have queue times
+- Requires GitHub authentication
+
+#### When to Use Each
+
+- Use `act` for:
+  - Development and debugging
+  - Quick syntax checks
+  - Testing workflow changes
+  - Local validation
+
+- Use GitHub CLI for:
+  - Final verification
+  - macOS-specific tests
+  - Release workflows
+  - Full integration testing
+
+## 🔍 Troubleshooting
+
+<details>
+<summary>Common Issues</summary>
+
+### Permission Denied
+```bash
+chmod +x setup.sh
+```
+
+### Homebrew Installation Fails
+- Ensure you have internet connection
+- Run `xcode-select --install` manually
+
+### Configuration Not Loading
+- Verify YAML syntax
+- Check file permissions
+- Ensure correct file path
+
+### Permission Denied
++ If you get permission errors or "files are not executable" errors:
+```bash
+# Make all scripts executable
+chmod +x setup.sh
+chmod +x test/test.sh
+chmod +x lib/modules/*.sh
+```
+</details>
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on:
+- Setting up your development environment
+- Our development workflow
+- Running tests and GitHub Actions locally
+- Pull request requirements
+- Code style guidelines
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Run tests (`./test/run_actions.sh local all`)
+4. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
+
+## 🙏 Acknowledgments
+
+- [Homebrew](https://brew.sh)
+- [nvm](https://github.com/nvm-sh/nvm)
+- [GitHub CLI](https://cli.github.com)
+
 ---
 
-<div class="bg-dark-darker text-white">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-    <div class="text-center">
-      <h1 class="text-5xl font-bold mb-6">
-        <i class="fas fa-bolt text-secondary"></i> Zero to Dev in Minutes
-      </h1>
-      <p class="text-xl text-gray-300 mb-12">
-        Stop wasting hours setting up your Mac. Get your entire development environment ready with a single command.
-      </p>
-
-      <div class="space-y-4">
-        <pre class="language-bash inline-block text-left bg-dark-lighter rounded-lg"><code>curl -fsSL https://zapz.dev/install | bash</code></pre>
-        <div class="flex gap-4 justify-center">
-          <a href="#getting-started" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-primary hover:bg-primary/90 transition-all">
-            <i class="fas fa-rocket mr-2"></i> Get Started
-          </a>
-          <a href="{{ site.github.repository_url }}" class="inline-flex items-center px-6 py-3 border border-gray-600 text-base font-medium rounded-lg text-gray-300 hover:bg-dark-lighter transition-all">
-            <i class="fab fa-github mr-2"></i> View on GitHub
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
+<div align="center">
+Made with ❤️ by @corbanb
 </div>
 
-<div class="bg-dark-lighter py-24">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-      <!-- Lightning Fast -->
-      <div class="bg-dark p-8 rounded-xl border border-gray-700 hover:-translate-y-1 transition-all">
-        <div class="text-4xl mb-4">
-          <i class="fas fa-bolt bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"></i>
-        </div>
-        <h3 class="text-xl font-semibold mb-2">Lightning Fast</h3>
-        <p class="text-gray-400">From fresh install to coding in under 5 minutes. Never waste time on manual setup again.</p>
-      </div>
+#### Setting Up Secrets
 
-      <!-- Smart Defaults -->
-      <div class="bg-dark p-8 rounded-xl border border-gray-700 hover:-translate-y-1 transition-all">
-        <div class="text-4xl mb-4">
-          <i class="fas fa-brain bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"></i>
-        </div>
-        <h3 class="text-xl font-semibold mb-2">Smart Defaults</h3>
-        <p class="text-gray-400">Best-practice configurations out of the box. Optimized for modern web development workflows.</p>
-      </div>
+For running GitHub Actions locally with `act`, you'll need to set up a secrets file:
 
-      <!-- Team Friendly -->
-      <div class="bg-dark p-8 rounded-xl border border-gray-700 hover:-translate-y-1 transition-all">
-        <div class="text-4xl mb-4">
-          <i class="fas fa-users bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"></i>
-        </div>
-        <h3 class="text-xl font-semibold mb-2">Team Friendly</h3>
-        <p class="text-gray-400">Share configurations via Git. Ensure consistent environments across your entire team.</p>
-      </div>
+1. During installation, a `.secrets` file is created at `~/.local/bin/.secrets`
+2. Edit this file with your GitHub token:
+```bash
+# Open secrets file in your editor
+code ~/.local/bin/.secrets  # or vim, nano, etc.
+```
 
-      <!-- Self-Maintaining -->
-      <div class="bg-dark p-8 rounded-xl border border-gray-700 hover:-translate-y-1 transition-all">
-        <div class="text-4xl mb-4">
-          <i class="fas fa-sync bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"></i>
-        </div>
-        <h3 class="text-xl font-semibold mb-2">Self-Maintaining</h3>
-        <p class="text-gray-400">Automatic updates and health checks keep your environment fresh and secure.</p>
-      </div>
+3. Add your GitHub Personal Access Token:
+```bash
+# Get your token from: https://github.com/settings/tokens
+# Required permissions:
+# - repo (Full control of private repositories)
+# - workflow (Update GitHub Action workflows)
+GITHUB_TOKEN=your-github-token-here
+github-token=your-github-token-here
+```
 
-      <!-- Zero Dependencies -->
-      <div class="bg-dark p-8 rounded-xl border border-gray-700 hover:-translate-y-1 transition-all">
-        <div class="text-4xl mb-4">
-          <i class="fas fa-feather bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"></i>
-        </div>
-        <h3 class="text-xl font-semibold mb-2">Zero Dependencies</h3>
-        <p class="text-gray-400">Works on a fresh macOS install. No prerequisites needed. We handle everything.</p>
-      </div>
+4. Secure the file permissions:
+```bash
+chmod 600 ~/.local/bin/.secrets
+```
 
-      <!-- Customizable -->
-      <div class="bg-dark p-8 rounded-xl border border-gray-700 hover:-translate-y-1 transition-all">
-        <div class="text-4xl mb-4">
-          <i class="fas fa-sliders-h bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"></i>
-        </div>
-        <h3 class="text-xl font-semibold mb-2">Fully Customizable</h3>
-        <p class="text-gray-400">Simple YAML config lets you tailor every aspect to your needs. Your setup, your way.</p>
-      </div>
+The secrets file is automatically used when running workflows:
+```bash
+# No need to specify --secret-file, it's handled automatically
+act -j lint -W .github/workflows/lint.yml \
+  -P ubuntu-latest=catthehacker/ubuntu:act-latest
+```
 
-      <!-- Secure -->
-      <div class="bg-dark p-8 rounded-xl border border-gray-700 hover:-translate-y-1 transition-all">
-        <div class="text-4xl mb-4">
-          <i class="fas fa-shield-alt bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"></i>
-        </div>
-        <h3 class="text-xl font-semibold mb-2">Security First</h3>
-        <p class="text-gray-400">Open source, auditable, and follows security best practices. Your system stays safe.</p>
-      </div>
-
-      <!-- Recovery Ready -->
-      <div class="bg-dark p-8 rounded-xl border border-gray-700 hover:-translate-y-1 transition-all">
-        <div class="text-4xl mb-4">
-          <i class="fas fa-life-ring bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"></i>
-        </div>
-        <h3 class="text-xl font-semibold mb-2">Recovery Ready</h3>
-        <p class="text-gray-400">Backup and restore capabilities built-in. Get back up and running in minutes, not days.</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Development Stack Section -->
-<div class="bg-dark py-24">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-      <div class="space-y-6">
-        <h2 class="text-3xl font-bold">
-          <i class="fas fa-layer-group text-secondary mr-2"></i> Modern Development Stack
-        </h2>
-        <p class="text-gray-400 text-lg">Get your entire development environment set up in one go:</p>
-        <ul class="space-y-4">
-          <li class="flex items-center text-gray-300">
-            <i class="fas fa-check text-secondary mr-3"></i>
-            Node.js & npm (via nvm)
-          </li>
-          <li class="flex items-center text-gray-300">
-            <i class="fas fa-check text-secondary mr-3"></i>
-            Git & GitHub CLI
-          </li>
-          <li class="flex items-center text-gray-300">
-            <i class="fas fa-check text-secondary mr-3"></i>
-            Docker Desktop
-          </li>
-          <li class="flex items-center text-gray-300">
-            <i class="fas fa-check text-secondary mr-3"></i>
-            VS Code with extensions
-          </li>
-          <li class="flex items-center text-gray-300">
-            <i class="fas fa-check text-secondary mr-3"></i>
-            AWS CLI & configurations
-          </li>
-        </ul>
-        <a href="/docs/stack" class="inline-flex items-center px-6 py-3 border border-gray-600 text-base font-medium rounded-lg text-gray-300 hover:bg-dark-lighter transition-all">
-          <i class="fas fa-arrow-right mr-2"></i> View Full Stack
-        </a>
-      </div>
-      <div class="relative">
-        <img src="https://picsum.photos/seed/dev-stack/800/600" alt="Development Stack" class="rounded-lg shadow-xl">
-        <div class="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-lg"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Configuration Section -->
-<div class="bg-dark-lighter py-24">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-      <div class="relative order-2 lg:order-1">
-        <img src="https://picsum.photos/seed/config/800/400" alt="Configuration" class="rounded-lg shadow-xl">
-        <div class="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-lg"></div>
-      </div>
-      <div class="space-y-6 order-1 lg:order-2">
-        <h2 class="text-3xl font-bold">
-          <i class="fas fa-sliders-h text-secondary mr-2"></i> Simple Configuration
-        </h2>
-        <p class="text-gray-400 text-lg">Customize your setup with a simple YAML file:</p>
-        <pre class="language-yaml"><code>node:
-  versions: ["lts/iron"]
-  packages: ["next", "typescript"]
-
-apps:
-  - visual-studio-code
-  - docker
-  - figma</code></pre>
-        <a href="/docs/configuration" class="inline-flex items-center px-6 py-3 border border-gray-600 text-base font-medium rounded-lg text-gray-300 hover:bg-dark-lighter transition-all">
-          <i class="fas fa-cog mr-2"></i> Learn More
-        </a>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Getting Started Section -->
-<div id="getting-started" class="bg-dark py-24">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="text-center mb-16">
-      <h2 class="text-3xl font-bold">
-        <i class="fas fa-rocket text-secondary mr-2"></i> Get Started in 3 Steps
-      </h2>
-      <p class="mt-4 text-xl text-gray-400">Set up your development environment in minutes</p>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-      <div class="bg-dark-darker p-8 rounded-xl border border-gray-700">
-        <div class="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-bold mb-6">1</div>
-        <h3 class="text-xl font-semibold mb-4">Install zapz</h3>
-        <pre class="language-bash"><code>curl -fsSL https://zapz.dev/install | bash</code></pre>
-      </div>
-
-      <div class="bg-dark-darker p-8 rounded-xl border border-gray-700">
-        <div class="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-bold mb-6">2</div>
-        <h3 class="text-xl font-semibold mb-4">Configure (Optional)</h3>
-        <pre class="language-bash"><code>zapz init</code></pre>
-      </div>
-
-      <div class="bg-dark-darker p-8 rounded-xl border border-gray-700">
-        <div class="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-bold mb-6">3</div>
-        <h3 class="text-xl font-semibold mb-4">Run Setup</h3>
-        <pre class="language-bash"><code>zapz setup</code></pre>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Next Steps Section -->
-<div class="bg-dark-lighter py-24">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="text-center mb-16">
-      <h2 class="text-3xl font-bold">Next Steps</h2>
-      <p class="mt-4 text-xl text-gray-400">Everything you need to get the most out of zapz</p>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-      <a href="/docs" class="group bg-dark-darker p-8 rounded-xl border border-gray-700 hover:-translate-y-1 transition-all hover:border-primary">
-        <i class="fas fa-book text-4xl text-secondary mb-4"></i>
-        <h3 class="text-xl font-semibold mb-2">Read the Docs</h3>
-        <p class="text-gray-400">Learn all features and options</p>
-      </a>
-
-      <a href="/docs/recipes" class="group bg-dark-darker p-8 rounded-xl border border-gray-700 hover:-translate-y-1 transition-all hover:border-primary">
-        <i class="fas fa-code text-4xl text-secondary mb-4"></i>
-        <h3 class="text-xl font-semibold mb-2">View Recipes</h3>
-        <p class="text-gray-400">Common setup patterns</p>
-      </a>
-
-      <a href="/docs/troubleshooting" class="group bg-dark-darker p-8 rounded-xl border border-gray-700 hover:-translate-y-1 transition-all hover:border-primary">
-        <i class="fas fa-wrench text-4xl text-secondary mb-4"></i>
-        <h3 class="text-xl font-semibold mb-2">Troubleshooting</h3>
-        <p class="text-gray-400">Common issues and fixes</p>
-      </a>
-    </div>
-  </div>
-</div>
-
-<!-- CTA Section -->
-<div class="bg-gradient-to-r from-primary to-secondary py-24">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-    <h2 class="text-3xl font-bold text-white mb-4">Ready to Supercharge Your Setup?</h2>
-    <p class="text-xl text-white/90 mb-8">Join developers who are saving hours on environment setup.</p>
-    <div class="flex gap-4 justify-center">
-      <a href="#getting-started" class="inline-flex items-center px-8 py-4 bg-white text-primary text-lg font-medium rounded-lg hover:bg-white/90 transition-all">
-        <i class="fas fa-rocket mr-2"></i> Get Started
-      </a>
-      <a href="{{ site.github.repository_url }}" class="inline-flex items-center px-8 py-4 border-2 border-white text-white text-lg font-medium rounded-lg hover:bg-white/10 transition-all">
-        <i class="fab fa-github mr-2"></i> Star on GitHub
-      </a>
-    </div>
-  </div>
-</div>
+Note: The `.secrets` file is gitignored by default to prevent accidental commits of sensitive information.
