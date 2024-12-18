@@ -383,181 +383,79 @@ To add new tests:
     ```
 3. Run the test suite to verify
 
-### Running GitHub Actions Locally
+### Running GitHub Actions
 
-You can test GitHub Actions workflows locally before pushing using [act](https://github.com/nektos/act). This helps catch issues early in your development cycle.
+You can run GitHub Actions workflows in two ways:
 
-#### Prerequisites
+#### 1. Local Testing with `act`
 
-1. Install `act` and Docker:
+Run workflows locally using Docker containers:
 ```bash
 # Install act
 brew install act
 
-# Install Docker Desktop
-brew install --cask docker
+# Run specific workflow
+./test/run_actions.sh local lint
+./test/run_actions.sh local test
+./test/run_actions.sh local install
+
+# Run all workflows
+./test/run_actions.sh local all
 ```
 
-2. Start Docker Desktop:
-   - Open Docker Desktop application
-   - Wait for Docker to finish starting up
-   - Verify Docker is running: `docker ps`
+Benefits:
+- Fast feedback loop
+- No GitHub Actions minutes consumed
+- Works offline
+- Great for development and debugging
 
-3. Create required files:
+Limitations:
+- Can't perfectly simulate macOS environments
+- Some GitHub features unavailable
+- Environment differences may exist
+
+#### 2. Remote Testing with GitHub CLI
+
+Run workflows on GitHub's infrastructure:
 ```bash
-# Copy default configuration
-cp config/default.yml.example config/default.yml
+# Install GitHub CLI
+brew install gh
+gh auth login
 
-# Create necessary directories
-mkdir -p config
+# Run specific workflow
+./test/run_actions.sh remote lint
+./test/run_actions.sh remote test
+./test/run_actions.sh remote install
 
-# Create secrets file (required for GitHub Actions)
-cat > .secrets << EOL
-GITHUB_TOKEN=fake-token
-github-token=fake-token
-EOL
+# Run all workflows
+./test/run_actions.sh remote all
 ```
 
-#### Running Individual Workflows
+Benefits:
+- Tests in real GitHub environment
+- Full macOS support
+- All GitHub features available
+- Exact production environment
 
-1. Lint Workflow (Ubuntu-compatible):
-```bash
-act -j lint -W .github/workflows/lint.yml \
-  -P ubuntu-latest=catthehacker/ubuntu:act-latest \
-  --secret-file .secrets
-```
+Limitations:
+- Consumes GitHub Actions minutes
+- Requires internet connection
+- May have queue times
+- Requires GitHub authentication
 
-2. PR Checks Workflow (Ubuntu-compatible):
-```bash
-act -j enforce-pr-rules -W .github/workflows/pr-checks.yml \
-  -P ubuntu-latest=catthehacker/ubuntu:act-latest \
-  -e test/events/pull_request.json
-```
+#### When to Use Each
 
-3. Documentation Sync (Ubuntu-compatible):
-```bash
-act -j sync-docs -W .github/workflows/docs-sync.yml \
-  -P ubuntu-latest=catthehacker/ubuntu:act-latest \
-  --secret-file .secrets
-```
+- Use `act` for:
+  - Development and debugging
+  - Quick syntax checks
+  - Testing workflow changes
+  - Local validation
 
-3. GitHub Pages (Ubuntu-compatible):
-```bash
-act -j build -W .github/workflows/pages.yml \
-  -P ubuntu-latest=catthehacker/ubuntu:act-latest \
-  --secret-file .secrets
-```
-
-#### Pull Request Requirements
-
-When creating a pull request, please ensure:
-
-1. **Title Format**: Use conventional commits format
-   - Format: `type(scope): description`
-   - Types: feat, fix, docs, style, refactor, test, chore
-   - Example: `feat(core): add new installation option`
-
-2. **Description**: Include a detailed description of your changes
-
-3. **Draft PRs**: Ensure PR is not in draft state when ready for review
-
-4. **Checks**: All automated checks must pass:
-   - Linting (shellcheck & yamllint)
-   - Tests (core & installation)
-   - PR title format validation
-   - Documentation updates (if applicable)
-
-#### Workflows with Limited Local Support
-
-The following workflows require macOS and have limited support in `act`:
-
-1. Test Workflow:
-```bash
-# Note: Some macOS-specific commands may fail
-act -j test -W .github/workflows/test.yml \
-  -P ubuntu-latest=catthehacker/ubuntu:act-latest
-```
-
-2. Installation Test:
-```bash
-# Note: Some macOS-specific commands may fail
-act -j test-install -W .github/workflows/install-test.yml \
-  -P ubuntu-latest=catthehacker/ubuntu:act-latest
-```
-
-3. Release Workflow:
-```bash
-# Note: Tag creation may not work locally
-act -j release -W .github/workflows/release.yml \
-  -P ubuntu-latest=catthehacker/ubuntu:act-latest
-```
-
-#### Running All Workflows
-
-You can run multiple workflows in a few ways:
-
-1. Run workflows individually:
-```bash
-# Run lint workflow
-act -j lint -W .github/workflows/lint.yml -P ubuntu-latest=catthehacker/ubuntu:act-latest
-
-# Run docs-sync workflow
-act -j sync-docs -W .github/workflows/docs-sync.yml -P ubuntu-latest=catthehacker/ubuntu:act-latest
-
-# Run pages workflow
-act -j build -W .github/workflows/pages.yml -P ubuntu-latest=catthehacker/ubuntu:act-latest
-```
-
-2. Run all workflows triggered by an event:
-```bash
-# Run all workflows that trigger on pull_request
-act pull_request -P ubuntu-latest=catthehacker/ubuntu:act-latest
-
-# Run all workflows that trigger on push
-act push -P ubuntu-latest=catthehacker/ubuntu:act-latest
-
-# List all available actions
-act -l
-```
-
-Note: Some workflows might be skipped if they require macOS runners or specific GitHub tokens.
-
-#### Environment Variables and Secrets
-
-For workflows that require secrets:
-
-1. Create a `.secrets` file:
-```bash
-# .secrets
-GITHUB_TOKEN=your_github_token
-```
-
-2. Run with secrets:
-```bash
-act --secret-file .secrets -P ubuntu-latest=catthehacker/ubuntu:act-latest
-```
-
-#### Troubleshooting Common Issues
-
-1. **Missing Configuration**:
-```bash
-# Error: No such file or directory
-# Solution: Create required config
-cp config/default.yml.example config/default.yml
-```
-
-2. **Docker Issues**:
-```bash
-# Error: Cannot connect to Docker daemon
-# Solution: Start Docker Desktop and wait
-```
-
-3. **Permission Issues**:
-```bash
-# Error: Permission denied
-# Solution: Ensure files are executable
-chmod +x setup.sh test/*.sh lib/modules/*.sh
-```
+- Use GitHub CLI for:
+  - Final verification
+  - macOS-specific tests
+  - Release workflows
+  - Full integration testing
 
 ## 🔍 Troubleshooting
 
@@ -594,11 +492,19 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🤝 Contributing
 
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on:
+- Setting up your development environment
+- Our development workflow
+- Running tests and GitHub Actions locally
+- Pull request requirements
+- Code style guidelines
+
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Run tests (`./test/run_actions.sh local all`)
+4. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
 
 ## 🙏 Acknowledgments
 

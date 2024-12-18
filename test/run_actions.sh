@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Script to run GitHub Actions locally using act
+# Script to run GitHub Actions locally using act or remotely using gh cli
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
@@ -12,6 +12,17 @@ check_act() {
     if ! command -v act &>/dev/null; then
         log_error "act is not installed. Please install it first:"
         echo "  brew install act"
+        exit 1
+    fi
+}
+
+# Function to check if gh cli is installed
+check_gh() {
+    if ! command -v gh &>/dev/null; then
+        log_error "GitHub CLI is not installed. Please install it first:"
+        echo "  brew install gh"
+        echo "Then authenticate:"
+        echo "  gh auth login"
         exit 1
     fi
 }
@@ -37,12 +48,12 @@ load_secrets() {
     fi
 }
 
-# Function to run a specific workflow
-run_workflow() {
+# Function to run a workflow locally with act
+run_workflow_local() {
     local workflow="$1"
     local event="${2:-push}"
 
-    log_info "Running workflow: $workflow (Event: $event)"
+    log_info "Running workflow locally: $workflow (Event: $event)"
     act -j "$workflow" \
         --env-file "${PROJECT_ROOT}/.secrets" \
         -s GITHUB_TOKEN \
@@ -50,30 +61,79 @@ run_workflow() {
         -e "${PROJECT_ROOT}/test/events/${event}.json" || return 1
 }
 
+# Function to run a workflow remotely with gh cli
+run_workflow_remote() {
+    local workflow="$1"
+    local ref="${2:-main}"
+
+    log_info "Running workflow remotely: $workflow (Ref: $ref)"
+    gh workflow run "$workflow" --ref "$ref" || return 1
+
+    # Wait for workflow to complete and show status
+    log_info "Waiting for workflow to complete..."
+    gh run list --workflow="$workflow" --limit 1 --watch
+}
+
 # Function to run all workflows
 run_all() {
+    local mode="$1"
     local failed=0
+
+    case "$mode" in
+        "local")
+            check_act
+            check_secrets
+            load_secrets
+            ;;
+        "remote")
+            check_gh
+            ;;
+        *)
+            log_error "Invalid mode: $mode. Use 'local' or 'remote'"
+            exit 1
+            ;;
+    esac
 
     # Core workflows
     log_header "Running Core Workflows"
-    run_workflow "lint" || ((failed++))
-    run_workflow "test" || ((failed++))
-    run_workflow "test-install" || ((failed++))
-    run_workflow "enforce-pr-rules" "pull_request" || ((failed++))
+    if [[ "$mode" == "local" ]]; then
+        run_workflow_local "lint" || ((failed++))
+        run_workflow_local "test" || ((failed++))
+        run_workflow_local "test-install" || ((failed++))
+        run_workflow_local "enforce-pr-rules" "pull_request" || ((failed++))
+    else
+        gh workflow run lint.yml || ((failed++))
+        gh workflow run test.yml || ((failed++))
+        gh workflow run install-test.yml || ((failed++))
+        gh workflow run pr-checks.yml || ((failed++))
+    fi
 
     # Documentation workflows
     log_header "Running Documentation Workflows"
-    run_workflow "sync-docs" "push" || ((failed++))
-    run_workflow "build" "push" || ((failed++))
+    if [[ "$mode" == "local" ]]; then
+        run_workflow_local "sync-docs" "push" || ((failed++))
+        run_workflow_local "build" "push" || ((failed++))
+    else
+        gh workflow run docs-sync.yml || ((failed++))
+        gh workflow run docs-build.yml || ((failed++))
+    fi
 
     # Maintenance workflows
     log_header "Running Maintenance Workflows"
-    run_workflow "update-deps" "workflow_dispatch" || ((failed++))
+    if [[ "$mode" == "local" ]]; then
+        run_workflow_local "update-deps" "workflow_dispatch" || ((failed++))
+    else
+        gh workflow run dependencies.yml || ((failed++))
+    fi
 
     # Release workflow (only run on demand)
-    if [[ "$1" == "--with-release" ]]; then
+    if [[ "$2" == "--with-release" ]]; then
         log_header "Running Release Workflow"
-        run_workflow "release" "push" || ((failed++))
+        if [[ "$mode" == "local" ]]; then
+            run_workflow_local "release" "push" || ((failed++))
+        else
+            gh workflow run release.yml || ((failed++))
+        fi
     fi
 
     # Summary
@@ -128,35 +188,21 @@ fi
 
 # Main function
 main() {
-    check_act
-    check_secrets
-    load_secrets
-
     case "$1" in
-        "lint")
-            run_workflow "lint"
+        "local")
+            shift
+            run_local_command "$@"
             ;;
-        "test")
-            run_workflow "test"
-            ;;
-        "install")
-            run_workflow "test-install"
-            ;;
-        "docs")
-            run_workflow "sync-docs" "push" && \
-            run_workflow "build" "push"
-            ;;
-        "deps")
-            run_workflow "update-deps" "workflow_dispatch"
-            ;;
-        "release")
-            run_workflow "release" "push"
-            ;;
-        "all")
-            run_all "${@:2}"
+        "remote")
+            shift
+            run_remote_command "$@"
             ;;
         *)
-            echo "Usage: $0 <command>"
+            echo "Usage: $0 <mode> <command>"
+            echo "Modes:"
+            echo "  local     - Run workflows locally using act"
+            echo "  remote    - Run workflows remotely using GitHub"
+            echo
             echo "Commands:"
             echo "  lint      - Run linting workflow"
             echo "  test      - Run test workflow"
@@ -165,8 +211,85 @@ main() {
             echo "  deps      - Run dependency update workflow"
             echo "  release   - Run release workflow"
             echo "  all       - Run all workflows"
+            echo
             echo "Options:"
             echo "  --with-release  - Include release workflow when running all"
+            echo
+            echo "Examples:"
+            echo "  $0 local lint              # Run lint workflow locally"
+            echo "  $0 remote test             # Run test workflow on GitHub"
+            echo "  $0 local all               # Run all workflows locally"
+            echo "  $0 remote all --with-release # Run all workflows on GitHub"
+            exit 1
+            ;;
+    esac
+}
+
+# Run local workflow command
+run_local_command() {
+    check_act
+    check_secrets
+    load_secrets
+
+    case "$1" in
+        "lint")
+            run_workflow_local "lint"
+            ;;
+        "test")
+            run_workflow_local "test"
+            ;;
+        "install")
+            run_workflow_local "test-install"
+            ;;
+        "docs")
+            run_workflow_local "sync-docs" "push" && \
+            run_workflow_local "build" "push"
+            ;;
+        "deps")
+            run_workflow_local "update-deps" "workflow_dispatch"
+            ;;
+        "release")
+            run_workflow_local "release" "push"
+            ;;
+        "all")
+            run_all "local" "${@:2}"
+            ;;
+        *)
+            echo "Invalid command: $1"
+            exit 1
+            ;;
+    esac
+}
+
+# Run remote workflow command
+run_remote_command() {
+    check_gh
+
+    case "$1" in
+        "lint")
+            gh workflow run lint.yml
+            ;;
+        "test")
+            gh workflow run test.yml
+            ;;
+        "install")
+            gh workflow run install-test.yml
+            ;;
+        "docs")
+            gh workflow run docs-sync.yml && \
+            gh workflow run docs-build.yml
+            ;;
+        "deps")
+            gh workflow run dependencies.yml
+            ;;
+        "release")
+            gh workflow run release.yml
+            ;;
+        "all")
+            run_all "remote" "${@:2}"
+            ;;
+        *)
+            echo "Invalid command: $1"
             exit 1
             ;;
     esac
