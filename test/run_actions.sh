@@ -186,6 +186,28 @@ if [[ ! -f "${PROJECT_ROOT}/test/events/workflow_dispatch.json" ]]; then
 EOF
 fi
 
+validate_pr() {
+    local TITLE="$1"
+    echo "Checking PR title: $TITLE"
+
+    # Check format
+    if ! echo "$TITLE" | grep -E "^(feat|fix|docs|style|refactor|test|chore)\([a-z-]+\): .+$" > /dev/null; then
+        echo "❌ PR title must follow format: type(scope): description"
+        echo "Valid types: feat, fix, docs, style, refactor, test, chore"
+        echo "Example: feat(core): add new feature"
+        return 1
+    fi
+
+    # Check length
+    if [ ${#TITLE} -gt 72 ]; then
+        echo "❌ PR title must be 72 characters or less (current: ${#TITLE})"
+        return 1
+    fi
+
+    echo "✅ PR title format is valid"
+    return 0
+}
+
 # Main function
 main() {
     case "$1" in
@@ -196,6 +218,10 @@ main() {
         "remote")
             shift
             run_remote_command "$@"
+            ;;
+        "validate-pr")
+            validate_pr "$2"
+            exit $?
             ;;
         *)
             echo "Usage: $0 <mode> <command>"
