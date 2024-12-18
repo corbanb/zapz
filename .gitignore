@@ -26,3 +26,22 @@ config/*.local.yml
 
 # Internal documentation
 .docs/
+
+# Jekyll files
+docs/_site/
+docs/.sass-cache/
+docs/.jekyll-cache/
+docs/.jekyll-metadata
+docs/vendor/
+docs/.bundle/
+.bundle/
+vendor/
+.ruby-version
+
+# Node
+node_modules/
+.env
+.env.local
+
+# System
+*.log

@@ -1,0 +1,18 @@
+<script type="text/javascript">
+  document.addEventListener('DOMContentLoaded', () => {
+    const placeholders = {
+      'dev-stack': 'https://picsum.photos/seed/dev-stack/800/600',
+      'config': 'https://picsum.photos/seed/config/800/400',
+      'updates': 'https://picsum.photos/seed/updates/800/500'
+    };
+
+    Object.entries(placeholders).forEach(([name, src]) => {
+      const img = document.querySelector(`img[src*="${name}"]`);
+      if (img) {
+        img.src = src;
+        // Add blur effect for a more modern look
+        img.style.filter = 'brightness(0.8)';
+      }
+    });
+  });
+</script>

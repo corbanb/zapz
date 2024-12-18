@@ -1,0 +1,17 @@
+source "https://rubygems.org"
+
+gem "jekyll", "3.9.3"
+gem "github-pages", "228"
+gem "webrick", "~> 1.8"
+gem "jekyll-remote-theme"
+gem "jekyll-seo-tag"
+gem "jekyll-sitemap"
+
+# Windows and JRuby does not include zoneinfo files
+platforms :mingw, :x64_mingw, :mswin, :jruby do
+  gem "tzinfo", "~> 2.0"
+  gem "tzinfo-data"
+end
+
+# Lock http_parser.rb for JRuby
+gem "http_parser.rb", "~> 0.6.0", :platforms => [:jruby]
