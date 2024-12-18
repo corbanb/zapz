@@ -1,8 +1,11 @@
 source "https://rubygems.org"
 
-gem "jekyll", "3.9.3"
-gem "github-pages", "228"
+# Core dependencies
+gem "jekyll", "~> 3.9.3"
+gem "github-pages", "~> 228"
 gem "webrick", "~> 1.8"
+
+# Required plugins
 gem "jekyll-remote-theme"
 gem "jekyll-seo-tag"
 gem "jekyll-sitemap"

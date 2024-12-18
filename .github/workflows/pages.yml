@@ -7,6 +7,7 @@ on:
     paths:
       - 'docs/**'
       - '.github/workflows/pages.yml'
+      - 'README.md'
   workflow_dispatch:
 
 permissions:
@@ -30,21 +31,26 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
           working-directory: docs
+          cache-version: 1
 
       - name: Setup Pages
+        id: pages
         uses: actions/configure-pages@v4
 
       - name: Install dependencies
         run: |
           cd docs
           bundle install
+        env:
+          BUNDLE_GEMFILE: ${{ github.workspace }}/docs/Gemfile
 
       - name: Build site
         run: |
           cd docs
-          JEKYLL_ENV=production bundle exec jekyll build
+          JEKYLL_ENV=production bundle exec jekyll build --trace
         env:
           JEKYLL_PAT: ${{ secrets.GITHUB_TOKEN }}
+          JEKYLL_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
