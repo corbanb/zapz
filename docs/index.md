@@ -514,6 +514,10 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ---
 
+<div align="center">
+Made with ❤️ by @corbanb
+</div>
+
 #### Setting Up Secrets
 
 For running GitHub Actions locally with `act`, you'll need to set up a secrets file:
@@ -548,11 +552,3 @@ act -j lint -W .github/workflows/lint.yml \
 ```
 
 Note: The `.secrets` file is gitignored by default to prevent accidental commits of sensitive information.
-
-
----
-
-<div align="center">
-Made with ❤️ by @corbanb
-</div>
-
