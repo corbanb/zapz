@@ -123,8 +123,12 @@ jobs:
 
               // Add helpful links
               comment += '\n### Helpful Links\n';
-              comment += `- [Installation Logs](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${run_id})\n`;
-              comment += `- [Configuration Guide](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/blob/main/docs/configuration.md)\n`;
+              const links = [
+                `- [Installation Logs](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${run_id})`,
+                `- [Configuration Guide](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/blob/main/docs/` +
+                'configuration.md)'
+              ];
+              comment += links.join('\n');
 
               // Post comment if this is a PR
               if (context.payload.pull_request) {

@@ -1,3 +1,4 @@
+---
 name: Code Quality
 
 on:
@@ -111,10 +112,13 @@ jobs:
 
               // Add helpful links
               comment += '\n### Helpful Links\n';
-              comment += `- [Lint Logs](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${run_id})\n`;
-              comment += `- [Code Style Guide](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/blob/main/docs/code-style.md)\n`;
-              comment += '- [ShellCheck Documentation](https://www.shellcheck.net/)\n';
-              comment += '- [YAML Lint Rules](https://yamllint.readthedocs.io/en/stable/rules.html)\n';
+              const links = [
+                `- [Lint Logs](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${run_id})`,
+                `- [Code Style Guide](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/blob/main/docs/code-style.md)`,
+                '- [ShellCheck Documentation](https://www.shellcheck.net/)',
+                '- [YAML Lint Rules](https://yamllint.readthedocs.io/en/stable/rules.html)'
+              ];
+              comment += links.join('\n');
 
               // Post comment if this is a PR
               if (context.payload.pull_request) {

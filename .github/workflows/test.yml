@@ -113,8 +113,10 @@ jobs:
 
               // Add helpful links
               comment += '\n### Helpful Links\n';
-              comment += `- [Test Logs](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${run_id})\n`;
-              comment += `- [Documentation](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/blob/main/docs/documentation.md)\n`;
+              comment += [
+                `- [Test Logs](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${run_id})`,
+                `- [Documentation](${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/blob/main/docs/documentation.md)`
+              ].join('\n');
 
               // Post comment if this is a PR
               if (context.payload.pull_request) {

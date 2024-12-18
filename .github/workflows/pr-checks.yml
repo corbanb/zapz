@@ -22,7 +22,9 @@ jobs:
 
             // Check PR title format
             if (!pr.title.match(/^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+/)) {
-              requirements.push('- PR title must follow conventional commits format (e.g., feat: add new feature)');
+              requirements.push(
+                '- PR title must follow conventional commits format (e.g., feat: add new feature)'
+              );
             }
 
             // Check PR description
@@ -37,7 +39,15 @@ jobs:
 
             // If there are missing requirements, comment and fail
             if (requirements.length > 0) {
-              const comment = `## ❌ Pull Request Requirements\n\nThis PR does not meet the following requirements:\n\n${requirements.join('\n')}\n\nPlease address these issues before merging.`;
+              const comment = [
+                '## ❌ Pull Request Requirements',
+                '',
+                'This PR does not meet the following requirements:',
+                '',
+                requirements.join('\n'),
+                '',
+                'Please address these issues before merging.'
+              ].join('\n');
 
               await github.rest.issues.createComment({
                 owner,
@@ -48,7 +58,11 @@ jobs:
 
               core.setFailed('PR requirements not met');
             } else {
-              const comment = `## ✅ Pull Request Requirements\n\nAll requirements are met! Please wait for review.`;
+              const comment = [
+                '## ✅ Pull Request Requirements',
+                '',
+                'All requirements are met! Please wait for review.'
+              ].join('\n');
 
               await github.rest.issues.createComment({
                 owner,
@@ -78,7 +92,11 @@ jobs:
                 expected_head_sha: pr.head.sha
               });
 
-              const comment = `## ⚠️ Auto-Merge Disabled\n\nAuto-merge has been disabled for this PR. All PRs require manual review and approval.`;
+              const comment = [
+                '## ⚠️ Auto-Merge Disabled',
+                '',
+                'Auto-merge has been disabled for this PR. All PRs require manual review and approval.'
+              ].join('\n');
 
               await github.rest.issues.createComment({
                 owner,
