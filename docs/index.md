@@ -68,17 +68,12 @@ The zero-dependency macOS development environment setup tool.
 
 ### Prerequisites
 
-First time setup:
-```bash
-# Make scripts executable (one-time setup)
-chmod +x setup.sh test/test.sh lib/modules/*.sh
-```
+**None!** zapz automatically installs any required dependencies (like `yq` for YAML processing) during setup. Just make sure you have a fresh macOS system.
 
-The tool requires these dependencies:
+For development work only:
 ```bash
-# Install with Homebrew
-brew install yq        # YAML processor
-brew install shellcheck  # Shell script linter (optional, for development)
+# Optional: Shell script linter for contributing
+brew install shellcheck
 ```
 
 ### Option 1: One-line Installation
