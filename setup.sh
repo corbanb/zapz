@@ -22,8 +22,16 @@ check_and_install_dependencies() {
     local missing_deps=()
 
     # Check for yq (required for YAML processing)
+    # Note: Requires mikefarah/yq (Go version), not python-yq
     if ! command -v yq >/dev/null 2>&1; then
         missing_deps+=("yq")
+    else
+        # Verify it's the correct yq (mikefarah's Go version supports 'eval' command)
+        if ! yq --help 2>&1 | grep -q "eval"; then
+            log_warning "Found incompatible yq version (Python-based)"
+            log_warning "Installing correct yq version (Go-based mikefarah/yq)..."
+            missing_deps+=("yq")
+        fi
     fi
 
     if ((${#missing_deps[@]} > 0)); then

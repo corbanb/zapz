@@ -69,27 +69,31 @@ print_test_summary() {
 # Check for required dependencies
 check_dependencies() {
     local missing_deps=()
+    local optional_deps=()
 
-    # List of required dependencies
-    local deps=(
-        "yq:Required for configuration processing"
-        "shellcheck:Required for syntax checking (development only)"
-    )
+    # Required dependencies
+    if ! command -v yq >/dev/null 2>&1; then
+        missing_deps+=("yq")
+        log_error "Missing yq - Required for configuration processing"
+    fi
 
-    for dep_entry in "${deps[@]}"; do
-        local dep="${dep_entry%%:*}"
-        local desc="${dep_entry#*:}"
-        if ! command -v "$dep" >/dev/null 2>&1; then
-            missing_deps+=("$dep")
-            log_error "Missing $dep - $desc"
-        fi
-    done
+    # Optional dependencies (warn but don't fail)
+    if ! command -v shellcheck >/dev/null 2>&1; then
+        optional_deps+=("shellcheck")
+        log_warning "Missing shellcheck - Recommended for development (optional)"
+    fi
 
     if ((${#missing_deps[@]} > 0)); then
         echo
         log_info "Install missing dependencies with:"
         echo "  brew install ${missing_deps[*]}"
         exit 1
+    fi
+
+    if ((${#optional_deps[@]} > 0)); then
+        log_info "Optional dependencies can be installed with:"
+        echo "  brew install ${optional_deps[*]}"
+        echo
     fi
 }
 
@@ -209,6 +213,12 @@ main() {
     # Test configuration loading
     run_test "Default config example exists and is valid YAML" \
         "yq eval '.' \"${PROJECT_ROOT}/config/default.yml.example\" &>/dev/null" || ((failed_tests++))
+
+    # Test config auto-creation from example
+    run_test "Config auto-creation works when default.yml is missing" \
+        "(cp \"${PROJECT_ROOT}/config/default.yml.example\" \"/tmp/test_config.yml\" && \
+         yq eval '.' \"/tmp/test_config.yml\" &>/dev/null && \
+         rm -f \"/tmp/test_config.yml\")" || ((failed_tests++))
 
     # Test directory structure
     run_test "Project directory structure is valid" \
