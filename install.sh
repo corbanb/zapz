@@ -66,19 +66,6 @@ check_dependencies
 # Create installation directory
 mkdir -p "$INSTALL_DIR"
 
-# Copy example config if default doesn't exist
-if [[ ! -f "$INSTALL_DIR/config/default.yml" ]]; then
-    cp "$INSTALL_DIR/config/default.yml.example" "$INSTALL_DIR/config/default.yml"
-fi
-
-# Copy example secrets if .secrets doesn't exist
-if [[ ! -f "$HOME/.local/bin/.secrets" ]]; then
-    cp "$INSTALL_DIR/.secrets.example" "$HOME/.local/bin/.secrets"
-    chmod 600 "$HOME/.local/bin/.secrets"  # Secure file permissions
-    print_info "Created .secrets file at $HOME/.local/bin/.secrets"
-    print_info "Please update it with your GitHub token"
-fi
-
 # Clone repository
 if [[ "${MOCK_INSTALL:-false}" == "true" ]]; then
     print_info "Running in test mode..."
@@ -88,6 +75,20 @@ elif [[ -d "$INSTALL_DIR/.git" ]]; then
 else
     print_info "Installing mac-setup..."
     git clone https://github.com/yourusername/macos-setup.git "$INSTALL_DIR"
+fi
+
+# Copy example config if default doesn't exist (after clone)
+if [[ -f "$INSTALL_DIR/config/default.yml.example" ]] && [[ ! -f "$INSTALL_DIR/config/default.yml" ]]; then
+    print_info "Creating default config from example..."
+    cp "$INSTALL_DIR/config/default.yml.example" "$INSTALL_DIR/config/default.yml"
+fi
+
+# Copy example secrets if .secrets doesn't exist
+if [[ -f "$INSTALL_DIR/.secrets.example" ]] && [[ ! -f "$HOME/.local/bin/.secrets" ]]; then
+    cp "$INSTALL_DIR/.secrets.example" "$HOME/.local/bin/.secrets"
+    chmod 600 "$HOME/.local/bin/.secrets"  # Secure file permissions
+    print_info "Created .secrets file at $HOME/.local/bin/.secrets"
+    print_info "Please update it with your GitHub token"
 fi
 
 # Make all scripts executable

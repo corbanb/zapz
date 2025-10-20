@@ -17,7 +17,7 @@ download_file() {
     elif command_exists "wget"; then
         wget -q "$url" -O "$output"
     else
-        error "Neither curl nor wget found"
+        log_error "Neither curl nor wget found"
         exit 1
     fi
 }
@@ -29,17 +29,32 @@ load_configuration() {
         download_file "$GIST_URL" "/tmp/setup_config.yml"
         CUSTOM_CONFIG="/tmp/setup_config.yml"
     fi
-    
+
     if [[ -n "$CUSTOM_CONFIG" ]]; then
         if [[ ! -f "$CUSTOM_CONFIG" ]]; then
-            error "Custom config file not found: $CUSTOM_CONFIG"
+            log_error "Custom config file not found: $CUSTOM_CONFIG"
             exit 1
         fi
         CONFIG_FILE="$CUSTOM_CONFIG"
     else
+        # Check if default config exists, if not copy from example
+        if [[ ! -f "$DEFAULT_CONFIG" ]]; then
+            local example_config="${DEFAULT_CONFIG}.example"
+            if [[ -f "$example_config" ]]; then
+                log_info "Creating default config from example..."
+                cp "$example_config" "$DEFAULT_CONFIG"
+            else
+                log_error "Configuration file not found: $DEFAULT_CONFIG"
+                log_error "Expected location: $example_config"
+                exit 1
+            fi
+        fi
         CONFIG_FILE="$DEFAULT_CONFIG"
     fi
-    
+
+    # Export CONFIG_FILE so it's available to all modules
+    export CONFIG_FILE
+
     log_debug "Using config file: $CONFIG_FILE"
 }
 
