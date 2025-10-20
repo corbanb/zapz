@@ -164,7 +164,9 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        os-version: [monterey, ventura, sonoma]
+        # Updated to current supported versions (Oct 2025)
+        # Removed: monterey (deprecated), ventura (retiring Dec 2025)
+        os-version: ['14', '15']  # Sonoma, Sequoia
       # Run tests in parallel but don't fail fast
       max-parallel: 1
       fail-fast: false

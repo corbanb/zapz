@@ -2,9 +2,11 @@
 
 setup_macos_preferences() {
     log_header "Configuring macOS preferences"
-    
-    # Close System Preferences to prevent override
-    osascript -e 'tell application "System Preferences" to quit'
+
+    # Close System Preferences/Settings to prevent override
+    # System Preferences (pre-Ventura) and System Settings (Ventura+)
+    osascript -e 'tell application "System Settings" to quit' 2>/dev/null || \
+        osascript -e 'tell application "System Preferences" to quit' 2>/dev/null || true
     
     # Dock preferences
     log_info "Configuring Dock preferences..."
