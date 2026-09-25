@@ -10,12 +10,14 @@ notify() {
     osascript -e "display notification \"$1\" with title \"zapz\"" >/dev/null 2>&1 || true
 }
 
-for brew_bin in /opt/homebrew/bin/brew /usr/local/bin/brew; do
-    if [[ -x "$brew_bin" ]]; then
-        eval "$("$brew_bin" shellenv)"
-        break
-    fi
-done
+if ! command -v brew >/dev/null 2>&1; then
+    for brew_bin in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+        if [[ -x "$brew_bin" ]]; then
+            eval "$("$brew_bin" shellenv)"
+            break
+        fi
+    done
+fi
 
 echo "=== zapz update started at $(date) ==="
 failed=()
