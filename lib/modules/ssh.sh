@@ -47,7 +47,9 @@ EOF
         chmod 600 "$ssh_config"
     elif ! grep -qE '^[[:space:]]*Host[[:space:]]+github\.com([[:space:]]|$)' "$ssh_config"; then
         log_info "Adding GitHub entry to existing SSH config..."
-        # Prepend so it takes precedence over any existing `Host *` block
+        # Prepend so it takes precedence over any existing `Host *` block.
+        # The trailing `Host *` keeps options at the top of the user's file
+        # (Include, IdentityAgent, ...) applying to every host.
         local tmp
         tmp=$(mktemp)
         cat > "$tmp" << EOF
@@ -57,6 +59,7 @@ Host github.com
     UseKeychain yes
     IdentityFile $ssh_key
 
+Host *
 EOF
         cat "$ssh_config" >> "$tmp"
         cat "$tmp" > "$ssh_config"

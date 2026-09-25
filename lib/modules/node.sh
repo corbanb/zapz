@@ -45,11 +45,8 @@ setup_node() {
     fi
 
     # Load nvm in new shells
-    local rc_file
-    for rc_file in "$HOME/.zshrc" "$HOME/.bashrc"; do
-        write_managed_block "$rc_file" "nvm" 'export NVM_DIR="$HOME/.nvm"
+    write_managed_block "$(shell_rc_file)" "nvm" 'export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
-    done
 
     # Install Node versions from config
     log_info "Installing Node.js versions..."

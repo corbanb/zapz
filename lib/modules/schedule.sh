@@ -63,11 +63,39 @@ unload_launch_agent() {
     launchctl bootout "gui/$(id -u)" "$plist" >/dev/null 2>&1 || true
 }
 
+# bootout returns before the job is fully gone, so an immediate bootstrap
+# can fail with "Input/output error"; retry briefly
+load_launch_agent() {
+    local plist="$1" attempt
+    for attempt in 1 2 3 4 5; do
+        if launchctl bootstrap "gui/$(id -u)" "$plist" 2>/dev/null; then
+            return 0
+        fi
+        sleep 1
+    done
+    return 1
+}
+
+# Earlier versions scheduled updates with a crontab entry; remove it so
+# updates don't run twice
+remove_legacy_cron_job() {
+    command_exists crontab || return 0
+    local current
+    current=$(crontab -l 2>/dev/null) || return 0
+    if grep -q 'mac-setup-update' <<< "$current"; then
+        log_info "Removing the old cron-based update job"
+        # grep -v exits 1 when it removes every line
+        { grep -v 'mac-setup-update' <<< "$current" || true; } | crontab -
+    fi
+}
+
 setup_scheduled_updates() {
     log_header "Setting up scheduled updates"
 
     local plist
     plist=$(launch_agent_path)
+
+    remove_legacy_cron_job
 
     if ! config_enabled '.cron.update_schedule.enabled'; then
         if [[ -f "$plist" ]]; then
@@ -122,7 +150,7 @@ EOF
 
     # Reload so schedule changes take effect
     unload_launch_agent "$plist"
-    if launchctl bootstrap "gui/$(id -u)" "$plist"; then
+    if load_launch_agent "$plist"; then
         log_success "Scheduled $frequency updates at $(printf '%02d:%02d' "$hour" "$minute")"
     else
         log_warning "Could not load $plist; load it later with: launchctl bootstrap gui/$(id -u) $plist"

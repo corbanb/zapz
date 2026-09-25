@@ -15,7 +15,7 @@ shipped_scripts() {
 test_syntax() {
     local file
     while IFS= read -r file; do
-        bash -n "$file" || fail "syntax error in $file"
+        "$BASH" -n "$file" || fail "syntax error in $file"
     done < <(shipped_scripts; ls "$PROJECT_ROOT"/test/*.sh "$PROJECT_ROOT"/scripts/*.sh)
 }
 

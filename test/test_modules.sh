@@ -36,8 +36,27 @@ test_write_managed_block_is_idempotent() {
     assert_count "$rc" "# >>> zapz demo >>>" 1
     assert_not_contains "$rc" "export A=2"
     assert_contains "$rc" "export A=3"
-    assert_contains "$rc" "before"
-    assert_contains "$rc" "after"
+    # Replaced in place: lines the user added after the block stay after it
+    assert_eq "$(cat "$rc")" "before
+# >>> zapz demo >>>
+export A=3
+# <<< zapz demo <<<
+after"
+}
+
+test_write_managed_block_keeps_backslashes() {
+    setup_sandbox; load_zapz
+    write_managed_block "$HOME/.zshrc" demo 'printf "a\tb\n"'
+    assert_contains "$HOME/.zshrc" 'printf "a\tb\n"'
+}
+
+test_write_managed_block_without_end_marker() {
+    setup_sandbox; load_zapz
+    local rc="$HOME/.zshrc"
+    printf 'before\n# >>> zapz demo >>>\nold\nuser line\n' > "$rc"
+    cp "$rc" "$SANDBOX/original"
+    write_managed_block "$rc" demo "new" 2>/dev/null
+    assert_eq "$(cat "$rc")" "$(cat "$SANDBOX/original")" "file changed despite missing end marker"
 }
 
 test_version_gt() {
@@ -123,6 +142,26 @@ test_homebrew_failure_does_not_abort() {
     [[ "$output" == *"formula broken"* ]] || fail "failure not reported: $output"
 }
 
+test_homebrew_rejects_invalid_yaml() {
+    setup_sandbox; load_zapz
+    use_config <<< 'homebrew: [unclosed'
+    if (setup_homebrew) >/dev/null 2>&1; then fail "invalid YAML accepted"; fi
+    assert_not_contains "$STUB_LOG" "brew update"
+}
+
+test_bash_users_get_brew_and_nvm() {
+    setup_sandbox; load_zapz
+    export SHELL=/bin/bash
+    fake_nvm
+    use_config <<< 'node: {}'
+    setup_homebrew
+    setup_node
+    assert_contains "$HOME/.bash_profile" "# >>> zapz homebrew >>>"
+    assert_contains "$HOME/.bash_profile" "# >>> zapz nvm >>>"
+    assert_no_file "$HOME/.zprofile"
+    assert_no_file "$HOME/.zshrc"
+}
+
 test_homebrew_shellenv_added_once() {
     setup_sandbox; load_zapz
     use_config <<< 'homebrew: {}'
@@ -184,6 +223,16 @@ test_schedule_disabled_removes_agent() {
     assert_contains "$STUB_LOG" "launchctl bootout"
 }
 
+test_schedule_removes_legacy_cron_job() {
+    setup_sandbox; load_zapz
+    printf '0 9 * * * /Users/me/.local/bin/mac-setup-update\n' > "$STUB_STATE/crontab"
+    stub crontab '
+if [[ "$1" == "-l" ]]; then cat "$STUB_STATE/crontab"; else cat > "$STUB_STATE/crontab"; fi'
+    use_config <<< 'cron: { update_schedule: { enabled: false } }'
+    setup_scheduled_updates
+    assert_eq "$(cat "$STUB_STATE/crontab")" ""
+}
+
 test_schedule_rejects_bad_input() {
     setup_sandbox; load_zapz
     use_config <<< 'cron: { update_schedule: { enabled: true, frequency: daily, time: "25:00" } }'
@@ -236,6 +285,20 @@ test_ssh_adds_github_host_to_existing_config() {
     assert_not_contains "$STUB_LOG" "ssh-keygen"
 }
 
+test_ssh_keeps_leading_global_options_global() {
+    setup_sandbox; load_zapz
+    use_config <<< 'git: {}'
+    mkdir -p "$HOME/.ssh"
+    touch "$HOME/.ssh/id_ed25519" "$HOME/.ssh/id_ed25519.pub"
+    printf 'Include ~/.orbstack/ssh/config\n\nHost work\n    HostName work.example.com\n' > "$HOME/.ssh/config"
+    setup_ssh
+    # The user's top-level Include must follow a `Host *` line, not sit
+    # inside the github.com block
+    local before_include
+    before_include=$(sed -n '/^Include/q;p' "$HOME/.ssh/config" | grep -E '^Host ' | tail -n1)
+    assert_eq "$before_include" "Host *"
+}
+
 test_ssh_generates_key_with_passphrase_prompt() {
     setup_sandbox; load_zapz
     stub ssh-keygen 'touch "$HOME/.ssh/id_ed25519" "$HOME/.ssh/id_ed25519.pub"'
@@ -284,6 +347,16 @@ EOF
     assert_count "$HOME/.zshrc" "zapz nvm >>>" 1
 }
 
+# --- xcode ----------------------------------------------------------------
+
+test_xcode_wait_times_out() {
+    setup_sandbox; load_zapz
+    stub xcode-select '[[ "$1" == "-p" ]] && exit 2; exit 0'
+    local status=0
+    (ZAPZ_XCODE_TIMEOUT=0 install_xcode_tools) >/dev/null 2>&1 || status=$?
+    assert_eq "$status" 1 "exit status when the installer never finishes"
+}
+
 # --- update notice (sourced from users' shells) ---------------------------
 
 prepare_update_cache() {
@@ -297,7 +370,7 @@ test_update_notice_when_newer() {
     setup_sandbox
     prepare_update_cache "99.0.0"
     local out
-    out=$(bash -c '. "$ZAPZ_HOME/lib/check_update.sh"')
+    out=$("$BASH" -c '. "$ZAPZ_HOME/lib/check_update.sh"')
     [[ "$out" == *"zapz 99.0.0 is available"* ]] || fail "no notice: $out"
     assert_not_contains "$STUB_LOG" "curl"
 }
@@ -305,9 +378,9 @@ test_update_notice_when_newer() {
 test_update_notice_silent_when_current_or_disabled() {
     setup_sandbox
     prepare_update_cache "0.0.1"
-    assert_eq "$(bash -c '. "$ZAPZ_HOME/lib/check_update.sh"')" ""
+    assert_eq "$("$BASH" -c '. "$ZAPZ_HOME/lib/check_update.sh"')" ""
     prepare_update_cache "99.0.0"
-    assert_eq "$(ZAPZ_DISABLE_UPDATE_CHECK=1 bash -c '. "$ZAPZ_HOME/lib/check_update.sh"')" ""
+    assert_eq "$(ZAPZ_DISABLE_UPDATE_CHECK=1 "$BASH" -c '. "$ZAPZ_HOME/lib/check_update.sh"')" ""
 }
 
 test_update_notice_in_zsh_without_leaks() {
@@ -325,7 +398,7 @@ test_update_notice_refreshes_stale_cache_in_background() {
     setup_sandbox
     export ZAPZ_HOME="$PROJECT_ROOT"
     stub curl 'echo "{\"tag_name\": \"v42.0.0\"}"'
-    bash -c '. "$ZAPZ_HOME/lib/check_update.sh"'
+    "$BASH" -c '. "$ZAPZ_HOME/lib/check_update.sh"'
     local i
     for i in 1 2 3 4 5 6 7 8 9 10; do
         [[ "$(cat "$HOME/.cache/zapz/latest_version" 2>/dev/null)" == "42.0.0" ]] && return 0
@@ -339,14 +412,14 @@ test_update_notice_refreshes_stale_cache_in_background() {
 test_cli_arguments() {
     setup_sandbox
     local out status
-    "$PROJECT_ROOT/setup.sh" --version | grep -q "zapz version"
-    "$PROJECT_ROOT/setup.sh" --help | grep -q "Usage: zapz"
+    "$BASH" "$PROJECT_ROOT/setup.sh" --version | grep -q "zapz version"
+    "$BASH" "$PROJECT_ROOT/setup.sh" --help | grep -q "Usage: zapz"
 
-    status=0; out=$("$PROJECT_ROOT/setup.sh" --bogus 2>&1) || status=$?
+    status=0; out=$("$BASH" "$PROJECT_ROOT/setup.sh" --bogus 2>&1) || status=$?
     assert_eq "$status" 1 "exit status for unknown option"
     [[ "$out" == *"Unknown option: --bogus"* ]] || fail "$out"
 
-    status=0; out=$("$PROJECT_ROOT/setup.sh" --config 2>&1) || status=$?
+    status=0; out=$("$BASH" "$PROJECT_ROOT/setup.sh" --config 2>&1) || status=$?
     assert_eq "$status" 1 "exit status for missing option value"
     [[ "$out" == *"requires a value"* ]] || fail "$out"
 }
@@ -355,7 +428,7 @@ test_cli_through_symlink() {
     setup_sandbox
     mkdir -p "$HOME/.local/bin"
     ln -s "$PROJECT_ROOT/setup.sh" "$HOME/.local/bin/zapz"
-    "$HOME/.local/bin/zapz" --version | grep -q "zapz version"
+    "$BASH" "$HOME/.local/bin/zapz" --version | grep -q "zapz version"
 }
 
 # --- maintenance script (run by launchd) ----------------------------------
@@ -363,7 +436,7 @@ test_cli_through_symlink() {
 test_maintenance_runs_updates() {
     setup_sandbox
     stub mas
-    "$PROJECT_ROOT/lib/maintenance.sh" > /dev/null
+    "$BASH" "$PROJECT_ROOT/lib/maintenance.sh" > /dev/null
     assert_contains "$STUB_LOG" "brew update"
     assert_contains "$STUB_LOG" "brew upgrade"
     assert_contains "$STUB_LOG" "mas upgrade"
@@ -371,7 +444,9 @@ test_maintenance_runs_updates() {
 
 section "config helpers"
 run_test "config_get handles missing, empty and false values" test_config_get
-run_test "write_managed_block replaces instead of appending" test_write_managed_block_is_idempotent
+run_test "write_managed_block replaces in place instead of appending" test_write_managed_block_is_idempotent
+run_test "write_managed_block keeps backslashes" test_write_managed_block_keeps_backslashes
+run_test "write_managed_block leaves a file with no end marker alone" test_write_managed_block_without_end_marker
 run_test "version_gt compares numerically" test_version_gt
 
 section "git"
@@ -383,11 +458,14 @@ section "homebrew"
 run_test "installs only missing taps, formulas and casks" test_homebrew_installs_missing_packages
 run_test "a failing package doesn't abort setup" test_homebrew_failure_does_not_abort
 run_test "shellenv is added to ~/.zprofile once" test_homebrew_shellenv_added_once
+run_test "invalid YAML stops setup" test_homebrew_rejects_invalid_yaml
+run_test "bash users get brew and nvm in ~/.bash_profile" test_bash_users_get_brew_and_nvm
 
 section "scheduled updates"
 run_test "weekly schedule writes a valid LaunchAgent" test_schedule_weekly
 run_test "daily and monthly schedules" test_schedule_daily_and_monthly
 run_test "disabling removes the LaunchAgent" test_schedule_disabled_removes_agent
+run_test "removes the old cron job" test_schedule_removes_legacy_cron_job
 run_test "invalid time, day or frequency is rejected" test_schedule_rejects_bad_input
 
 section "macOS preferences"
@@ -396,10 +474,14 @@ run_test "developer mode is opt-in" test_macos_developer_mode_opt_in
 
 section "ssh"
 run_test "adds github.com to an existing SSH config once" test_ssh_adds_github_host_to_existing_config
+run_test "keeps top-level SSH options global" test_ssh_keeps_leading_global_options_global
 run_test "generates a key without an empty passphrase" test_ssh_generates_key_with_passphrase_prompt
 
 section "node"
 run_test "re-runs with nvm already installed" test_node_rerun_with_existing_nvm
+
+section "xcode"
+run_test "gives up if the installer never finishes" test_xcode_wait_times_out
 
 section "update notice"
 run_test "shows a notice when a newer release is cached" test_update_notice_when_newer

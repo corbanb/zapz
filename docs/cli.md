@@ -102,12 +102,12 @@ zapz --update
 | Variable | Used by | Description |
 | --- | --- | --- |
 | `ZAPZ_HOME` | installer | Install location. Default: `~/.local/share/zapz`. |
-| `ZAPZ_REF` | installer | Branch or tag to install, e.g. `v0.1.0`. Default: the repository's default branch. |
+| `ZAPZ_REF` | installer | Branch or tag to install, e.g. `v0.2.0`. Default: the repository's default branch. |
 | `ZAPZ_DISABLE_UPDATE_CHECK` | shell | Set to any value to turn off the "new version available" notice in new terminals. |
 
 ```bash
 # Install a specific release
-curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | ZAPZ_REF=v0.1.0 bash
+curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | ZAPZ_REF=v0.2.0 bash
 
 # Turn off the update notice (add to ~/.zshrc)
 export ZAPZ_DISABLE_UPDATE_CHECK=1

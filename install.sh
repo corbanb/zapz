@@ -46,8 +46,14 @@ elif [[ -d "$ZAPZ_HOME/.git" ]]; then
     if [[ -n "$ZAPZ_REF" ]]; then
         git -C "$ZAPZ_HOME" fetch --quiet origin "$ZAPZ_REF"
         git -C "$ZAPZ_HOME" checkout --quiet FETCH_HEAD
-    else
+    elif git -C "$ZAPZ_HOME" symbolic-ref -q HEAD >/dev/null; then
         git -C "$ZAPZ_HOME" pull --ff-only --quiet
+    else
+        # A previous ZAPZ_REF install left a detached HEAD; return to the
+        # default branch
+        git -C "$ZAPZ_HOME" fetch --quiet origin
+        default_ref=$(git -C "$ZAPZ_HOME" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/main)
+        git -C "$ZAPZ_HOME" checkout --quiet -B "${default_ref#origin/}" "$default_ref"
     fi
 elif [[ -e "$ZAPZ_HOME" && -n "$(ls -A "$ZAPZ_HOME")" ]]; then
     print_error "$ZAPZ_HOME exists and is not a zapz checkout; move it or set ZAPZ_HOME"
@@ -73,13 +79,7 @@ fi
 mkdir -p "$BIN_DIR"
 ln -sf "$ZAPZ_HOME/setup.sh" "$BIN_DIR/zapz"
 
-# macOS Terminal starts login shells, which read ~/.bash_profile, not ~/.bashrc
-case "${SHELL:-}" in
-    */bash) shell_rc="$HOME/.bash_profile" ;;
-    *) shell_rc="$HOME/.zshrc" ;;
-esac
-
-write_managed_block "$shell_rc" "cli" "case \":\$PATH:\" in
+write_managed_block "$(shell_rc_file)" "cli" "case \":\$PATH:\" in
     *\":\$HOME/.local/bin:\"*) ;;
     *) export PATH=\"\$HOME/.local/bin:\$PATH\" ;;
 esac

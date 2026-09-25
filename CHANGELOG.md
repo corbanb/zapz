@@ -5,7 +5,7 @@ All notable changes to zapz will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.0] - Unreleased
 
 The first version that installs and runs end to end on a fresh Mac.
 
@@ -51,6 +51,14 @@ The first version that installs and runs end to end on a fresh Mac.
 - An existing `~/.ssh/config` never got a `github.com` entry.
 - Unknown options and missing option values crashed with "command not found".
 - Gist configs were downloaded to a fixed, predictable `/tmp` path.
+- Bash users now get Homebrew and nvm set up in `~/.bash_profile` (zsh users
+  in `~/.zprofile` and `~/.zshrc`).
+- A config with invalid YAML now stops setup with an error instead of
+  skipping everything and reporting success.
+- `zapz --update` works on installs pinned to a tag with `ZAPZ_REF`.
+- The old cron job is removed when you run setup, so updates don't run twice.
+- Setup gives up with a message if the Xcode Command Line Tools installer
+  never finishes, instead of waiting forever.
 
 ### Removed
 - `--force`, which had no effect.

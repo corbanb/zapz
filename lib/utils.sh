@@ -69,25 +69,67 @@ config_enabled() {
     [[ "$(config_get "$1" "${2:-false}")" == "true" ]]
 }
 
-# Write a block into a shell rc file between marker comments, replacing any
-# previous copy so re-running never duplicates it.
+# Fail if the config isn't valid YAML. Otherwise every lookup would quietly
+# come back empty and setup would skip everything yet report success.
+validate_configuration() {
+    local errors
+    if ! errors=$(yq e '.' "$CONFIG_FILE" 2>&1 >/dev/null); then
+        log_error "Invalid YAML in $CONFIG_FILE:"
+        printf '%s\n' "$errors" >&2
+        exit 1
+    fi
+}
+
+# Shell startup files for the user's shell. macOS Terminal starts login
+# shells, and login bash reads only ~/.bash_profile.
+shell_profile_file() {
+    case "${SHELL:-}" in
+        */bash) printf '%s\n' "$HOME/.bash_profile" ;;
+        *) printf '%s\n' "$HOME/.zprofile" ;;
+    esac
+}
+
+shell_rc_file() {
+    case "${SHELL:-}" in
+        */bash) printf '%s\n' "$HOME/.bash_profile" ;;
+        *) printf '%s\n' "$HOME/.zshrc" ;;
+    esac
+}
+
+# Write a block into a shell rc file between marker comments. An existing
+# block is replaced where it is, so re-running neither duplicates it nor
+# moves it past lines the user added after it.
 # Usage: write_managed_block <file> <name> <content>
 write_managed_block() {
     local file="$1" name="$2" content="$3"
     local begin="# >>> zapz ${name} >>>"
     local end="# <<< zapz ${name} <<<"
-    local tmp
+    local block tmp
 
     touch "$file"
+    # Without an end marker we can't tell where the block stops
+    if grep -qxF "$begin" "$file" && ! grep -qxF "$end" "$file"; then
+        log_warning "$file has \"$begin\" but no \"$end\"; leaving it unchanged"
+        return 0
+    fi
+
+    # Pass the content through a file: awk -v would mangle backslashes
+    block=$(mktemp)
     tmp=$(mktemp)
-    awk -v b="$begin" -v e="$end" '
-        $0 == b { skip = 1; next }
-        $0 == e { skip = 0; next }
-        !skip
+    printf '%s\n%s\n%s\n' "$begin" "$content" "$end" > "$block"
+    awk -v b="$begin" -v e="$end" -v blockfile="$block" '
+        function emit(line) {
+            while ((getline line < blockfile) > 0) print line
+            close(blockfile)
+            written = 1
+        }
+        $0 == b { if (!written) emit(); skipping = 1; next }
+        skipping && $0 == e { skipping = 0; next }
+        !skipping
+        END { if (!written) emit() }
     ' "$file" > "$tmp"
-    printf '%s\n%s\n%s\n' "$begin" "$content" "$end" >> "$tmp"
     cat "$tmp" > "$file"
-    rm -f "$tmp"
+    rm -f "$tmp" "$block"
 }
 
 # Download file from URL

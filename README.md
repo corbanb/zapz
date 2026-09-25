@@ -71,7 +71,7 @@ This clones zapz to `~/.local/share/zapz`, adds a `zapz` command to
 To install a specific release or branch, set `ZAPZ_REF`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | ZAPZ_REF=v0.1.0 bash
+curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | ZAPZ_REF=v0.2.0 bash
 ```
 
 ### Run

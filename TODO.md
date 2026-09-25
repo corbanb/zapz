@@ -22,9 +22,10 @@ formulas, one Node version), then runs it again to check idempotency. The
 runner already has Homebrew, so this is realistic and fairly fast.
 
 ### Cut v0.2.0
-After merging: bump `ZAPZ_VERSION`, move the Unreleased changelog entries
-into a release section, and tag it (see CONTRIBUTING.md). The update notice
-only works once releases exist.
+`ZAPZ_VERSION` is already 0.2.0 on this branch. After merging, date the
+0.2.0 changelog entry and tag the merge commit `v0.2.0` (see CONTRIBUTING.md).
+The docs' `ZAPZ_REF=v0.2.0` examples and the update notice depend on that
+release existing.
 
 ## Later
 

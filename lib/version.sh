@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-ZAPZ_VERSION="0.1.0"
+ZAPZ_VERSION="0.2.0"
 ZAPZ_MIN_MACOS_VERSION="12.0"  # Monterey
 ZAPZ_REPO_SLUG="corbanb/zapz"
 ZAPZ_RELEASE_URL="https://github.com/${ZAPZ_REPO_SLUG}/releases"

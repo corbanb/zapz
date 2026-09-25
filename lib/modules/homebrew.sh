@@ -20,10 +20,11 @@ setup_homebrew() {
     fi
 
     # Make brew available in future login shells
-    write_managed_block "$HOME/.zprofile" "homebrew" "eval \"\$($(command -v brew) shellenv)\""
+    write_managed_block "$(shell_profile_file)" "homebrew" "eval \"\$($(command -v brew) shellenv)\""
 
     # yq is needed to read package lists from the config
     ensure_yq
+    validate_configuration
 
     log_info "Updating Homebrew..."
     brew update

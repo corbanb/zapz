@@ -138,12 +138,28 @@ update_zapz() {
         exit 1
     fi
 
-    local before after
+    local before after latest tag
     before=$(git -C "$ZAPZ_ROOT" rev-parse HEAD)
     log_info "Updating zapz..."
-    if ! git -C "$ZAPZ_ROOT" pull --ff-only --quiet; then
-        log_error "Update failed. Local changes in ${ZAPZ_ROOT} may be blocking it."
-        exit 1
+
+    if git -C "$ZAPZ_ROOT" symbolic-ref -q HEAD >/dev/null; then
+        if ! git -C "$ZAPZ_ROOT" pull --ff-only --quiet; then
+            log_error "Update failed. Local changes in ${ZAPZ_ROOT} may be blocking it."
+            exit 1
+        fi
+    else
+        # Installed at a tag (ZAPZ_REF): move to the newest release tag
+        git -C "$ZAPZ_ROOT" fetch --quiet --tags origin
+        latest=""
+        for tag in $(git -C "$ZAPZ_ROOT" tag -l 'v[0-9]*'); do
+            if [[ -z "$latest" ]] || version_gt "$tag" "$latest"; then
+                latest="$tag"
+            fi
+        done
+        if [[ -z "$latest" ]] || ! git -C "$ZAPZ_ROOT" checkout --quiet "$latest"; then
+            log_error "Update failed. Reinstall with: curl -fsSL https://raw.githubusercontent.com/${ZAPZ_REPO_SLUG}/main/install.sh | bash"
+            exit 1
+        fi
     fi
     after=$(git -C "$ZAPZ_ROOT" rev-parse HEAD)
 
@@ -182,6 +198,11 @@ main() {
     trap cleanup EXIT
 
     load_configuration
+    # Catch YAML mistakes before changing anything (yq may not exist yet on
+    # a fresh Mac; setup_homebrew validates again once it's installed)
+    if is_compatible_yq; then
+        validate_configuration
+    fi
 
     # Run setup modules
     install_xcode_tools
