@@ -29,7 +29,13 @@ test_reinstall_is_idempotent() {
     setup_sandbox
     run_install > /dev/null
     echo "custom: true" >> "$HOME/.local/share/zapz/config/default.yml"
-    run_install > /dev/null
+    # A developer's own config in the source tree must not replace it
+    local src="$SANDBOX/src"
+    mkdir -p "$src"
+    tar -C "$PROJECT_ROOT" --exclude=./.git -cf - . | tar -C "$src" -xf -
+    echo "developer: true" > "$src/config/default.yml"
+    stub uname 'echo Darwin'
+    ZAPZ_SOURCE="$src" bash "$PROJECT_ROOT/install.sh" > /dev/null
     assert_count "$HOME/.zshrc" "# >>> zapz cli >>>" 1
     assert_contains "$HOME/.local/share/zapz/config/default.yml" "custom: true"
 }

@@ -38,7 +38,9 @@ fi
 if [[ -n "$ZAPZ_SOURCE" ]]; then
     print_info "Copying zapz from $ZAPZ_SOURCE..."
     mkdir -p "$ZAPZ_HOME"
-    cp -R "$ZAPZ_SOURCE/." "$ZAPZ_HOME/"
+    # Skip .git (read-only objects break re-copying) and the user's config
+    tar -C "$ZAPZ_SOURCE" --exclude=./.git --exclude=./config/default.yml -cf - . \
+        | tar -C "$ZAPZ_HOME" -xf -
 elif [[ -d "$ZAPZ_HOME/.git" ]]; then
     print_info "Updating existing installation in $ZAPZ_HOME..."
     if [[ -n "$ZAPZ_REF" ]]; then
