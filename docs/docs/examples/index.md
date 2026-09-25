@@ -2,179 +2,67 @@
 layout: docs
 title: Examples
 icon: fas fa-code
-description: Real-world examples and starter templates for common development scenarios
+description: Complete configs for common setups, and the commands to run them
 ---
 
-<div class="examples-header">
-  <div class="examples-intro">
-    <div class="icon-wrap">
-      <i class="fas fa-rocket"></i>
-    </div>
-    <div class="content">
-      <h1>Starter Examples</h1>
-      <p>Production-ready templates to kickstart your development environment.</p>
-    </div>
-  </div>
-</div>
+Each example is a config file plus the command that uses it. Save the config
+over `~/.local/share/zapz/config/default.yml`, or keep it anywhere and pass it
+with `-c`. See [Configuration]({{ site.baseurl }}/configuration/) for what
+every key does.
 
-## Quick Start Templates
+- [Node.js Setup]({{ site.baseurl }}/docs/examples/node/): Node versions, global
+  npm packages and the tools around them
+- [Team Configuration]({{ site.baseurl }}/docs/examples/team/): one config in a
+  gist that everyone runs
 
-<div class="templates-grid">
-  <div class="template-card">
-    <div class="template-header">
-      <div class="template-icon">
-        <i class="fab fa-node-js"></i>
-      </div>
-      <div class="template-meta">
-        <span class="tag">Basic</span>
-        <span class="downloads">2.1k uses</span>
-      </div>
-    </div>
-    <h3>Node.js Starter</h3>
-    <p>Basic Node.js setup with TypeScript and testing configuration.</p>
-    <div class="template-preview">
-      <pre><code class="language-bash">zapz setup --template node-basic</code></pre>
-    </div>
-    <ul class="template-features">
-      <li>Node.js LTS</li>
-      <li>TypeScript</li>
-      <li>Jest + ESLint</li>
-      <li>VS Code settings</li>
-    </ul>
-    <div class="template-actions">
-      <a href="/docs/examples/node-basic" class="btn-primary">View Template</a>
-      <a href="#" class="btn-secondary">Copy Command</a>
-    </div>
-  </div>
+## Basic setup
 
-  <div class="template-card">
-    <div class="template-header">
-      <div class="template-icon">
-        <i class="fas fa-layer-group"></i>
-      </div>
-      <div class="template-meta">
-        <span class="tag">Full Stack</span>
-        <span class="downloads">1.8k uses</span>
-      </div>
-    </div>
-    <h3>Next.js Full Stack</h3>
-    <p>Complete Next.js 13+ setup with database and authentication.</p>
-    <div class="template-preview">
-      <pre><code class="language-bash">zapz setup --template nextjs-full</code></pre>
-    </div>
-    <ul class="template-features">
-      <li>Next.js 13+</li>
-      <li>Prisma + PostgreSQL</li>
-      <li>NextAuth.js</li>
-      <li>Docker compose</li>
-    </ul>
-    <div class="template-actions">
-      <a href="/docs/examples/nextjs-full" class="btn-primary">View Template</a>
-      <a href="#" class="btn-secondary">Copy Command</a>
-    </div>
-  </div>
-</div>
+```bash
+# Install zapz
+curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | bash
 
-## Featured Example
+# Open a new terminal, review the config, then run with default settings
+zapz
+```
 
-<div class="featured-example">
-  <div class="content">
-    <div class="badge">Enterprise Ready</div>
-    <h3>Team Development Setup</h3>
-    <p>Complete development environment for teams with shared configurations and CI/CD integration.</p>
+## Minimal config
 
-    <div class="features-grid">
-      <div class="feature">
-        <i class="fas fa-users"></i>
-        <h4>Team Workflow</h4>
-        <p>Shared ESLint, Prettier, and Git hooks</p>
-      </div>
-      <div class="feature">
-        <i class="fas fa-cube"></i>
-        <h4>Docker Ready</h4>
-        <p>Development containers with hot reload</p>
-      </div>
-      <div class="feature">
-        <i class="fas fa-infinity"></i>
-        <h4>CI/CD Pipeline</h4>
-        <p>GitHub Actions workflow included</p>
-      </div>
-      <div class="feature">
-        <i class="fas fa-shield-alt"></i>
-        <h4>Security First</h4>
-        <p>Security scanning and best practices</p>
-      </div>
-    </div>
+Anything you leave out is skipped, so a config can be as small as you like.
+This one sets your git identity and installs a few packages, and nothing else:
 
-    <div class="example-actions">
-      <a href="/docs/examples/enterprise" class="btn-primary">View Example</a>
-      <a href="https://github.com/zapz/examples/enterprise" class="btn-secondary">
-        <i class="fab fa-github"></i> View on GitHub
-      </a>
-    </div>
-  </div>
-  <div class="preview">
-    <div class="code-window">
-      <div class="window-header">
-        <div class="window-dots">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-        <span>docker-compose.yml</span>
-      </div>
-      <pre><code class="language-yaml">services:
-  app:
-    build:
-      context: .
-      target: development
-    volumes:
-      - .:/app
-      - /app/node_modules
-    ports:
-      - "3000:3000"
-    depends_on:
-      - db</code></pre>
-    </div>
-  </div>
-</div>
+```yaml
+git:
+  user:
+    name: "Your Name"
+    email: "you@example.com"
+  default_branch: "main"
 
-## Example Categories
+homebrew:
+  formulas:
+    - "gh"
+    - "jq"
+    - "ripgrep"
+  casks:
+    - "visual-studio-code"
+```
 
-<div class="categories-grid">
-  <a href="/docs/examples/frontend" class="category-card">
-    <div class="category-icon">
-      <i class="fas fa-laptop-code"></i>
-    </div>
-    <h4>Frontend Examples</h4>
-    <ul>
-      <li>React + Vite</li>
-      <li>Next.js App Router</li>
-      <li>Vue 3 + TypeScript</li>
-    </ul>
-  </a>
+With no `node` section, zapz still installs nvm but no Node versions. With no
+`cron` section, scheduled updates stay off.
 
-  <a href="/docs/examples/backend" class="category-card">
-    <div class="category-icon">
-      <i class="fas fa-server"></i>
-    </div>
-    <h4>Backend Examples</h4>
-    <ul>
-      <li>Express + TypeScript</li>
-      <li>NestJS + GraphQL</li>
-      <li>FastAPI + Python</li>
-    </ul>
-  </a>
+## Packages only
 
-  <a href="/docs/examples/fullstack" class="category-card">
-    <div class="category-icon">
-      <i class="fas fa-layer-group"></i>
-    </div>
-    <h4>Full Stack Examples</h4>
-    <ul>
-      <li>T3 Stack</li>
-      <li>MERN Stack</li>
-      <li>Next.js + Prisma</li>
-    </ul>
-  </a>
-</div>
+On a machine where you don't want zapz to change system settings or add a
+background job, skip those steps:
+
+```bash
+zapz --skip-macos --skip-schedule
+```
+
+## Config in a dotfiles repo
+
+Keep your config under version control and point zapz at it:
+
+```bash
+git clone git@github.com:you/dotfiles.git ~/dotfiles
+zapz -c ~/dotfiles/zapz.yml
+```
