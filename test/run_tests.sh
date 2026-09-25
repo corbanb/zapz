@@ -1,48 +1,18 @@
 #!/usr/bin/env bash
 
-# Main test runner script
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+# Run every test suite with the same bash that runs this script, so
+# `/bin/bash test/run_tests.sh` on macOS tests under bash 3.2.
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Test files to run
-declare -a TEST_FILES=(
-    "test.sh"
-    "test_install.sh"
-)
+failed=0
+for suite in test.sh test_modules.sh test_install.sh; do
+    printf '\n### %s\n' "$suite"
+    "$BASH" "$TEST_DIR/$suite" || failed=1
+done
 
-# Run all test files
-run_all_tests() {
-    local failed=0
-    
-    echo -e "${BLUE}=== Running All Tests ===${NC}"
-    echo
-    
-    for test_file in "${TEST_FILES[@]}"; do
-        echo -e "${BLUE}Running ${test_file}...${NC}"
-        if bash "${SCRIPT_DIR}/${test_file}"; then
-            echo -e "${GREEN}✓ ${test_file} passed${NC}"
-        else
-            echo -e "${RED}✗ ${test_file} failed${NC}"
-            failed=1
-        fi
-        echo
-    done
-    
-    if ((failed)); then
-        echo -e "${RED}=== Some tests failed ===${NC}"
-        exit 1
-    else
-        echo -e "${GREEN}=== All test suites passed ===${NC}"
-    fi
-}
-
-# Run if executed directly
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    run_all_tests
-fi 
+if [[ $failed -ne 0 ]]; then
+    printf '\nSome test suites failed\n'
+    exit 1
+fi
+printf '\nAll test suites passed\n'
