@@ -40,6 +40,11 @@ run_test() {
         FAILED_TESTS+=("$name")
         printf "  ${_RED}✗ %s${_NC}\n" "$name"
         sed 's/^/      /' "$output"
+        # Show the failure on the PR page, not just in the job log
+        if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+            printf '::error title=%s::%s\n' "$name" \
+                "$(tail -n 25 "$output" | awk '{ gsub(/\033\[[0-9;]*m/, ""); gsub(/%/, "%25"); printf "%s%%0A", $0 }')"
+        fi
     fi
     rm -f "$output"
 }
