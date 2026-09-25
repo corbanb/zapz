@@ -7,6 +7,34 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Check that yq is mikefarah's Go version (python-yq uses incompatible syntax)
+is_compatible_yq() {
+    command_exists yq && yq --version 2>&1 | grep -q "mikefarah"
+}
+
+# Ensure a compatible yq is installed (requires Homebrew)
+ensure_yq() {
+    if is_compatible_yq; then
+        return 0
+    fi
+
+    if command_exists yq; then
+        log_warning "Found incompatible yq ($(command -v yq)); zapz needs mikefarah/yq"
+    fi
+
+    log_info "Installing yq..."
+    if ! brew install yq; then
+        log_error "Failed to install yq"
+        exit 1
+    fi
+
+    if ! is_compatible_yq; then
+        log_error "An incompatible yq is still first on your PATH: $(command -v yq)"
+        log_info "Remove it or put $(brew --prefix)/bin earlier in PATH, then re-run"
+        exit 1
+    fi
+}
+
 # Download file from URL
 download_file() {
     local url="$1"

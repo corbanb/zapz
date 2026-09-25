@@ -18,39 +18,14 @@ print_info() { printf "${BLUE}INFO: %s${NC}\n" "$1"; }
 print_success() { printf "${GREEN}SUCCESS: %s${NC}\n" "$1"; }
 print_error() { printf "${RED}ERROR: %s${NC}\n" "$1" >&2; }
 
-# Check and install dependencies
+# Only git is needed to install; setup.sh installs Homebrew, yq, etc. itself
 check_dependencies() {
-    local missing_deps=()
-
-    # Required dependencies
-    local deps=(
-        "yq:YAML processor for configuration"
-    )
-
-    print_info "Checking dependencies..."
-
-    for dep in "${deps[@]}"; do
-        local name="${dep%%:*}"
-        local description="${dep#*:}"
-
-        if ! command -v "$name" >/dev/null 2>&1; then
-            missing_deps+=("$name")
-            print_info "Missing $name ($description)"
-        fi
-    done
-
-    if ((${#missing_deps[@]} > 0)); then
-        if ! command -v brew >/dev/null 2>&1; then
-            print_error "Homebrew is required to install dependencies"
-            print_info "Install Homebrew first: https://brew.sh"
-            exit 1
-        fi
-
-        print_info "Installing missing dependencies..."
-        for dep in "${missing_deps[@]}"; do
-            print_info "Installing $dep..."
-            brew install "$dep"
-        done
+    # On a fresh Mac, /usr/bin/git is a stub that fails until the
+    # Xcode Command Line Tools are installed
+    if ! git --version >/dev/null 2>&1; then
+        print_error "git is required to install zapz"
+        print_info "Install the Xcode Command Line Tools first: xcode-select --install"
+        exit 1
     fi
 }
 
@@ -74,7 +49,7 @@ elif [[ -d "$INSTALL_DIR/.git" ]]; then
     git -C "$INSTALL_DIR" pull
 else
     print_info "Installing mac-setup..."
-    git clone https://github.com/yourusername/macos-setup.git "$INSTALL_DIR"
+    git clone https://github.com/corbanb/zapz.git "$INSTALL_DIR"
 fi
 
 # Copy example config if default doesn't exist (after clone)

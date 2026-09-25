@@ -216,9 +216,24 @@ main() {
 
     # Test config auto-creation from example
     run_test "Config auto-creation works when default.yml is missing" \
-        "(cp \"${PROJECT_ROOT}/config/default.yml.example\" \"/tmp/test_config.yml\" && \
-         yq eval '.' \"/tmp/test_config.yml\" &>/dev/null && \
-         rm -f \"/tmp/test_config.yml\")" || ((failed_tests++))
+        "(tmp=\$(mktemp -d) && trap 'rm -rf \"\$tmp\"' EXIT && \
+         cp \"${PROJECT_ROOT}/config/default.yml.example\" \"\$tmp/default.yml.example\" && \
+         source \"${PROJECT_ROOT}/lib/logging.sh\" && source \"${PROJECT_ROOT}/lib/utils.sh\" && \
+         VERBOSE=false GIST_URL='' CUSTOM_CONFIG='' DEFAULT_CONFIG=\"\$tmp/default.yml\" && \
+         load_configuration && \
+         [[ -f \"\$tmp/default.yml\" && \"\$CONFIG_FILE\" == \"\$tmp/default.yml\" ]])" || ((failed_tests++))
+
+    run_test "Custom config path is used when provided" \
+        "(source \"${PROJECT_ROOT}/lib/logging.sh\" && source \"${PROJECT_ROOT}/lib/utils.sh\" && \
+         VERBOSE=false GIST_URL='' DEFAULT_CONFIG=/nonexistent \
+         CUSTOM_CONFIG=\"${PROJECT_ROOT}/config/default.yml.example\" && \
+         load_configuration && \
+         [[ \"\$CONFIG_FILE\" == \"${PROJECT_ROOT}/config/default.yml.example\" ]])" || ((failed_tests++))
+
+    run_test "Missing custom config fails" \
+        "! (source \"${PROJECT_ROOT}/lib/logging.sh\" && source \"${PROJECT_ROOT}/lib/utils.sh\" && \
+         VERBOSE=false GIST_URL='' CUSTOM_CONFIG=/nonexistent/config.yml && \
+         load_configuration)" || ((failed_tests++))
 
     # Test directory structure
     run_test "Project directory structure is valid" \

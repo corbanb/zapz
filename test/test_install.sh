@@ -196,10 +196,6 @@ test_installation() {
     run_test "Update existing installation works" \
         "INSTALL_DIR=$INSTALL_DIR bash ${PROJECT_ROOT}/install.sh" || ((failed_tests++))
 
-    # Test dependencies
-    run_test "Dependencies are available after install" \
-        "command -v yq" || ((failed_tests++))
-
     # Test update notification setup
     run_test "Update checker is installed" \
         "[[ -f \"$INSTALL_DIR/lib/check_update.sh\" ]]" || ((failed_tests++))

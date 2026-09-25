@@ -16,7 +16,10 @@ setup_homebrew() {
     else
         log_success "Homebrew already installed"
     fi
-    
+
+    # yq is needed to read package lists from the config
+    ensure_yq
+
     # Update Homebrew
     log_info "Updating Homebrew..."
     brew update

@@ -16,50 +16,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/version.sh"
 # shellcheck source=lib/logging.sh
 source "${SCRIPT_DIR}/lib/logging.sh"
-
-# Check and auto-install dependencies
-check_and_install_dependencies() {
-    local missing_deps=()
-
-    # Check for yq (required for YAML processing)
-    # Note: Requires mikefarah/yq (Go version), not python-yq
-    if ! command -v yq >/dev/null 2>&1; then
-        missing_deps+=("yq")
-    else
-        # Verify it's the correct yq (mikefarah's Go version supports 'eval' command)
-        if ! yq --help 2>&1 | grep -q "eval"; then
-            log_warning "Found incompatible yq version (Python-based)"
-            log_warning "Installing correct yq version (Go-based mikefarah/yq)..."
-            missing_deps+=("yq")
-        fi
-    fi
-
-    if ((${#missing_deps[@]} > 0)); then
-        log_info "Installing required dependencies: ${missing_deps[*]}"
-
-        # Check if Homebrew is available
-        if ! command -v brew >/dev/null 2>&1; then
-            log_error "Homebrew is required to install dependencies"
-            log_info "Please install Homebrew first: https://brew.sh"
-            log_info "Or install yq manually: brew install yq"
-            exit 1
-        fi
-
-        # Auto-install missing dependencies
-        for dep in "${missing_deps[@]}"; do
-            log_info "Installing $dep..."
-            brew install "$dep" || {
-                log_error "Failed to install $dep"
-                exit 1
-            }
-        done
-        log_success "Dependencies installed successfully"
-    fi
-}
-
-# Check dependencies before loading utils (which uses yq)
-check_and_install_dependencies
-
 # shellcheck source=lib/utils.sh
 source "${SCRIPT_DIR}/lib/utils.sh"
 
