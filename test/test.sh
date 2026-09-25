@@ -244,7 +244,7 @@ main() {
         "source ${PROJECT_ROOT}/lib/utils.sh && command_exists ls" || ((failed_tests++))
 
     # Test module loading
-    for module in xcode homebrew git ssh node macos cron; do
+    for module in xcode homebrew git ssh node macos schedule; do
         # First check if file exists
         run_test "Module file $module exists" \
             "[[ -f ${PROJECT_ROOT}/lib/modules/${module}.sh ]]" || ((failed_tests++))

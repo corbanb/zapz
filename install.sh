@@ -1,108 +1,89 @@
 #!/usr/bin/env bash
 
-# Installation script for macOS setup tool
+# Install zapz:
+#   curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | bash
+#
+# Environment overrides:
+#   ZAPZ_HOME    install location (default: ~/.local/share/zapz)
+#   ZAPZ_REPO    git URL to clone (default: https://github.com/corbanb/zapz.git)
+#   ZAPZ_REF     branch or tag to install (default: the repo's default branch)
+#   ZAPZ_SOURCE  local directory to copy instead of cloning (used by CI)
+
 set -euo pipefail
 
-# Default installation directory
-DEFAULT_INSTALL_DIR="$HOME/.local/bin/mac-setup"
-INSTALL_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
+ZAPZ_HOME="${ZAPZ_HOME:-$HOME/.local/share/zapz}"
+ZAPZ_REPO="${ZAPZ_REPO:-https://github.com/corbanb/zapz.git}"
+ZAPZ_REF="${ZAPZ_REF:-}"
+ZAPZ_SOURCE="${ZAPZ_SOURCE:-}"
+BIN_DIR="$HOME/.local/bin"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+# Minimal output helpers until the repo (and lib/logging.sh) is available
+print_info() { printf '\033[0;34mINFO: %s\033[0m\n' "$1"; }
+print_error() { printf '\033[0;31mERROR: %s\033[0m\n' "$1" >&2; }
 
-# Print with color
-print_info() { printf "${BLUE}INFO: %s${NC}\n" "$1"; }
-print_success() { printf "${GREEN}SUCCESS: %s${NC}\n" "$1"; }
-print_error() { printf "${RED}ERROR: %s${NC}\n" "$1" >&2; }
-
-# Only git is needed to install; setup.sh installs Homebrew, yq, etc. itself
-check_dependencies() {
-    # On a fresh Mac, /usr/bin/git is a stub that fails until the
-    # Xcode Command Line Tools are installed
-    if ! git --version >/dev/null 2>&1; then
-        print_error "git is required to install zapz"
-        print_info "Install the Xcode Command Line Tools first: xcode-select --install"
-        exit 1
-    fi
-}
-
-# Check if running on macOS
 if [[ "$(uname)" != "Darwin" ]]; then
-    print_error "This tool only works on macOS"
+    print_error "zapz only works on macOS"
     exit 1
 fi
 
-# Check and install dependencies
-check_dependencies
+# On a fresh Mac, /usr/bin/git is a stub that fails until the
+# Xcode Command Line Tools are installed
+if ! git --version >/dev/null 2>&1; then
+    print_error "git is required to install zapz"
+    print_info "Install the Xcode Command Line Tools first: xcode-select --install"
+    exit 1
+fi
 
-# Create installation directory
-mkdir -p "$INSTALL_DIR"
-
-# Clone repository
-if [[ "${MOCK_INSTALL:-false}" == "true" ]]; then
-    print_info "Running in test mode..."
-elif [[ -d "$INSTALL_DIR/.git" ]]; then
-    print_info "Updating existing installation..."
-    git -C "$INSTALL_DIR" pull
+# Fetch or update the code
+if [[ -n "$ZAPZ_SOURCE" ]]; then
+    print_info "Copying zapz from $ZAPZ_SOURCE..."
+    mkdir -p "$ZAPZ_HOME"
+    cp -R "$ZAPZ_SOURCE/." "$ZAPZ_HOME/"
+elif [[ -d "$ZAPZ_HOME/.git" ]]; then
+    print_info "Updating existing installation in $ZAPZ_HOME..."
+    if [[ -n "$ZAPZ_REF" ]]; then
+        git -C "$ZAPZ_HOME" fetch --quiet origin "$ZAPZ_REF"
+        git -C "$ZAPZ_HOME" checkout --quiet FETCH_HEAD
+    else
+        git -C "$ZAPZ_HOME" pull --ff-only --quiet
+    fi
+elif [[ -e "$ZAPZ_HOME" && -n "$(ls -A "$ZAPZ_HOME")" ]]; then
+    print_error "$ZAPZ_HOME exists and is not a zapz checkout; move it or set ZAPZ_HOME"
+    exit 1
 else
-    print_info "Installing mac-setup..."
-    git clone https://github.com/corbanb/zapz.git "$INSTALL_DIR"
+    print_info "Installing zapz to $ZAPZ_HOME..."
+    mkdir -p "$(dirname "$ZAPZ_HOME")"
+    git clone --quiet ${ZAPZ_REF:+--branch "$ZAPZ_REF"} "$ZAPZ_REPO" "$ZAPZ_HOME"
 fi
 
-# Copy example config if default doesn't exist (after clone)
-if [[ -f "$INSTALL_DIR/config/default.yml.example" ]] && [[ ! -f "$INSTALL_DIR/config/default.yml" ]]; then
-    print_info "Creating default config from example..."
-    cp "$INSTALL_DIR/config/default.yml.example" "$INSTALL_DIR/config/default.yml"
+# shellcheck source=lib/logging.sh
+source "$ZAPZ_HOME/lib/logging.sh"
+# shellcheck source=lib/utils.sh
+source "$ZAPZ_HOME/lib/utils.sh"
+
+# Create the user's config from the example on first install
+if [[ ! -f "$ZAPZ_HOME/config/default.yml" ]]; then
+    log_info "Creating config at $ZAPZ_HOME/config/default.yml"
+    cp "$ZAPZ_HOME/config/default.yml.example" "$ZAPZ_HOME/config/default.yml"
 fi
 
-# Copy example secrets if .secrets doesn't exist
-if [[ -f "$INSTALL_DIR/.secrets.example" ]] && [[ ! -f "$HOME/.local/bin/.secrets" ]]; then
-    cp "$INSTALL_DIR/.secrets.example" "$HOME/.local/bin/.secrets"
-    chmod 600 "$HOME/.local/bin/.secrets"  # Secure file permissions
-    print_info "Created .secrets file at $HOME/.local/bin/.secrets"
-    print_info "Please update it with your GitHub token"
-fi
+# Put the `zapz` command on PATH
+mkdir -p "$BIN_DIR"
+ln -sf "$ZAPZ_HOME/setup.sh" "$BIN_DIR/zapz"
 
-# Make all scripts executable
-chmod +x "$INSTALL_DIR/setup.sh"
-chmod +x "$INSTALL_DIR/test/test.sh"
-chmod +x "$INSTALL_DIR/lib/modules/"*.sh
+# macOS Terminal starts login shells, which read ~/.bash_profile, not ~/.bashrc
+case "${SHELL:-}" in
+    */bash) shell_rc="$HOME/.bash_profile" ;;
+    *) shell_rc="$HOME/.zshrc" ;;
+esac
 
-# Verify permissions
-if ! [[ -x "$INSTALL_DIR/setup.sh" ]] || ! [[ -x "$INSTALL_DIR/test/test.sh" ]]; then
-    print_error "Failed to set executable permissions"
-    print_info "Try running: chmod +x setup.sh test/test.sh lib/modules/*.sh"
-    exit 1
-fi
+write_managed_block "$shell_rc" "cli" "case \":\$PATH:\" in
+    *\":\$HOME/.local/bin:\"*) ;;
+    *) export PATH=\"\$HOME/.local/bin:\$PATH\" ;;
+esac
+export ZAPZ_HOME=\"$ZAPZ_HOME\"
+[ -f \"\$ZAPZ_HOME/lib/check_update.sh\" ] && . \"\$ZAPZ_HOME/lib/check_update.sh\""
 
-# Create symlink in PATH
-SYMLINK_PATH="$HOME/.local/bin/zapz"
-mkdir -p "$(dirname "$SYMLINK_PATH")" || true
-ln -sf "$INSTALL_DIR/setup.sh" "$SYMLINK_PATH"
-
-# Add to PATH if needed
-if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-    SHELL_RC="$HOME/.zshrc"
-    touch "$SHELL_RC"  # Ensure file exists
-    [[ "$SHELL" == */bash ]] && SHELL_RC="$HOME/.bashrc"
-
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_RC"
-
-    # Add update check to shell RC
-    cat >> "$SHELL_RC" << 'EOF'
-
-# zapz update check
-if [[ -f "$HOME/.local/bin/mac-setup/lib/check_update.sh" ]]; then
-    source "$HOME/.local/bin/mac-setup/lib/check_update.sh"
-fi
-EOF
-
-    print_info "Added ~/.local/bin to PATH in $SHELL_RC"
-fi
-
-print_success "Installation complete!"
-print_info "Run 'zapz --help' to get started"
-print_info "Source your shell config or restart your terminal to use the 'zapz' command"
+log_success "Installation complete!"
+log_info "Review your config: $ZAPZ_HOME/config/default.yml"
+log_info "Then open a new terminal and run: zapz"

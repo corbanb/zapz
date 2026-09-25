@@ -29,7 +29,7 @@ log_error() {
 }
 
 log_debug() {
-    if [[ "$VERBOSE" == true ]]; then
+    if [[ "${VERBOSE:-false}" == true ]]; then
         printf "${YELLOW}DEBUG: %s${NC}\n" "$1"
     fi
 } 
