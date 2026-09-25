@@ -2,147 +2,186 @@
 layout: docs
 title: Recipe Collection
 icon: fas fa-book-open
-description: Ready-to-use configurations for common development scenarios
+description: Short answers to common tasks
 ---
 
-<div class="recipes-header">
-  <div class="recipes-intro">
-    <div class="icon-wrap">
-      <i class="fas fa-wand-sparkles"></i>
-    </div>
-    <div class="content">
-      <h1>Configuration Recipes</h1>
-      <p>Production-ready configurations for popular development setups.</p>
-    </div>
-  </div>
-</div>
+Each recipe is a config snippet or a command. Config snippets go in
+`~/.local/share/zapz/config/default.yml` (or whatever file you pass with `-c`);
+run `zapz` afterwards to apply them. For complete configs, see
+[Examples]({{ site.baseurl }}/docs/examples/).
 
-## Popular Recipes
+## Git
 
-<div class="recipes-grid">
-  <a href="{{ site.baseurl }}/docs/recipes/node" class="recipe-card">
-    <div class="recipe-header">
-      <div class="recipe-icon">
-        <i class="fab fa-node-js"></i>
-      </div>
-      <div class="recipe-meta">
-        <span class="tag">Popular</span>
-        <span class="time">5 min setup</span>
-      </div>
-    </div>
-    <h3>Node.js Development</h3>
-    <p>Complete Node.js environment with TypeScript, ESLint, and testing tools.</p>
-    <div class="recipe-preview">
-      <pre><code class="language-yaml">node:
-  versions: ["lts/iron"]
-  packages: ["typescript", "jest"]</code></pre>
-    </div>
-    <div class="recipe-footer">
-      <span class="learn-more">View Recipe <i class="fas fa-arrow-right"></i></span>
-    </div>
-  </a>
+### Keep my existing git identity
 
-  <a href="{{ site.baseurl }}/docs/recipes/nextjs" class="recipe-card">
-    <div class="recipe-header">
-      <div class="recipe-icon">
-        <i class="fas fa-rocket"></i>
-      </div>
-      <div class="recipe-meta">
-        <span class="tag">Full Stack</span>
-        <span class="time">8 min setup</span>
-      </div>
-    </div>
-    <h3>Next.js Starter</h3>
-    <p>Full-stack Next.js 13+ setup with Tailwind CSS, TypeScript, and Prisma.</p>
-    <div class="recipe-preview">
-      <pre><code class="language-yaml">node:
-  packages: ["next", "prisma"]
-apps:
-  - postgresql</code></pre>
-    </div>
-    <div class="recipe-footer">
-      <span class="learn-more">View Recipe <i class="fas fa-arrow-right"></i></span>
-    </div>
-  </a>
-</div>
+Leave the name and email empty, or delete them:
 
-## Featured Recipe
+```yaml
+git:
+  user:
+    name: ""
+    email: ""
+```
 
-<div class="featured-recipe">
-  <div class="content">
-    <div class="badge">New</div>
-    <h3>Team Configuration</h3>
-    <p>Share consistent development environments across your entire team.</p>
-    <ul class="feature-list">
-      <li>Shared ESLint & Prettier configs</li>
-      <li>Git hooks and commit conventions</li>
-      <li>VS Code workspace settings</li>
-      <li>Docker development containers</li>
-    </ul>
-    <a href="{{ site.baseurl }}/docs/recipes/team" class="btn-secondary">
-      Learn More <i class="fas fa-arrow-right"></i>
-    </a>
-  </div>
-  <div class="preview">
-    <div class="code-window">
-      <div class="window-header">
-        <i class="fas fa-code"></i>
-        <span>team-config.yml</span>
-      </div>
-      <pre><code class="language-yaml">team:
-  eslint: true
-  prettier: true
-  husky: true
-  vscode:
-    extensions:
-      - dbaeumer.vscode-eslint
-      - esbenp.prettier-vscode</code></pre>
-    </div>
-  </div>
-</div>
+### Use VS Code as the git editor
 
-## Browse by Category
+```yaml
+git:
+  editor: "code --wait"
+```
 
-<div class="category-grid">
-  <a href="#frontend" class="category-card">
-    <i class="fas fa-laptop-code"></i>
-    <h4>Frontend</h4>
-    <span class="count">6 recipes</span>
-  </a>
+### Set any other git option
 
-  <a href="#backend" class="category-card">
-    <i class="fas fa-server"></i>
-    <h4>Backend</h4>
-    <span class="count">4 recipes</span>
-  </a>
+```yaml
+git:
+  config:
+    pull.rebase: "true"
+    push.autoSetupRemote: "true"
+    core.autocrlf: "input"
+```
 
-  <a href="#fullstack" class="category-card">
-    <i class="fas fa-layer-group"></i>
-    <h4>Full Stack</h4>
-    <span class="count">3 recipes</span>
-  </a>
+## Packages
 
-  <a href="#devops" class="category-card">
-    <i class="fas fa-infinity"></i>
-    <h4>DevOps</h4>
-    <span class="count">5 recipes</span>
-  </a>
-</div>
+### Install from a third-party tap
 
-## All Recipes
+List the tap, then the formula:
 
-<div class="recipe-list">
-  <div class="recipe-group">
-    <h3 id="frontend">Frontend Development</h3>
-    <div class="recipes-grid">
-      <!-- Recipe cards -->
-    </div>
-  </div>
+```yaml
+homebrew:
+  taps:
+    - "hashicorp/tap"
+  formulas:
+    - "hashicorp/tap/terraform"
+```
 
-  <div class="recipe-group">
-    <h3 id="backend">Backend Development</h3>
-    <div class="recipes-grid">
-      <!-- Recipe cards -->
-    </div>
-  </div>
-</div>
+A tap-qualified formula name such as `oven-sh/bun/bun` also works on its own.
+
+### Add apps
+
+```yaml
+homebrew:
+  casks:
+    - "visual-studio-code"
+    - "iterm2"
+    - "docker"
+```
+
+If a cask fails because the app was already installed by hand, zapz reports it
+at the end and carries on. Delete the app or remove it from your config.
+
+### Pin Node versions
+
+```yaml
+node:
+  versions: ["22.11.0", "20.18.0"]
+  default: "22.11.0"
+```
+
+## macOS
+
+### Faster key repeat
+
+```yaml
+macos:
+  keyboard:
+    key_repeat: 2
+    initial_key_repeat: 15
+```
+
+Lower numbers mean faster repeat and a shorter delay before it starts.
+
+### Leave macOS settings alone
+
+For one run:
+
+```bash
+zapz --skip-macos
+```
+
+For good, delete the `macos` section from your config.
+
+### Enable Developer Mode
+
+```yaml
+macos:
+  developer_mode: true
+```
+
+zapz asks for your password to run `DevToolsSecurity -enable`.
+
+## Scheduled updates
+
+### Update every day
+
+```yaml
+cron:
+  update_schedule:
+    enabled: true
+    frequency: "daily"
+    time: "08:30"
+```
+
+### Update twice a week
+
+```yaml
+cron:
+  update_schedule:
+    enabled: true
+    frequency: "weekly"
+    time: "09:00"
+    days: ["Monday", "Thursday"]
+```
+
+### Turn scheduled updates off
+
+Set `enabled: false` and run `zapz` again. zapz removes the launchd agent.
+
+```yaml
+cron:
+  update_schedule:
+    enabled: false
+```
+
+### See what the last update did
+
+```bash
+tail -n 50 ~/Library/Logs/zapz/update.log
+```
+
+### Run the update now
+
+```bash
+bash ~/.local/share/zapz/lib/maintenance.sh
+```
+
+## zapz itself
+
+### Update zapz
+
+```bash
+zapz --update
+```
+
+### Install a specific release
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | ZAPZ_REF=v0.2.0 bash
+```
+
+### Install somewhere else
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | ZAPZ_HOME="$HOME/tools/zapz" bash
+```
+
+### Turn off the update notice
+
+```bash
+export ZAPZ_DISABLE_UPDATE_CHECK=1
+```
+
+Add it to `~/.zshrc` to make it permanent.
+
+### `zapz: command not found`
+
+Open a new terminal, or run `source ~/.zshrc`.

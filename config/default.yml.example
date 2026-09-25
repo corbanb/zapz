@@ -1,77 +1,70 @@
 ---
-# Default configuration for zapz development environment
+# zapz configuration
+# The installer copies this to config/default.yml; edit that copy.
+# Missing or empty values are skipped, so delete anything you don't want
+# zapz to manage.
 
 # Git configuration
 git:
   user:
-    name: ""  # Set via environment or CLI
-    email: "" # Set via environment or CLI
+    name: ""   # Leave empty to keep your existing git identity
+    email: ""
   editor: "vim"
   default_branch: "main"
+  # Any other `git config --global` options
   config:
     core.autocrlf: "input"
     pull.rebase: "true"
 
-# Node.js configuration
+# Node.js (installed with nvm)
 node:
   versions:
-    - "lts/iron"      # Node.js 20 (Latest LTS)
-    - "lts/hydrogen"  # Node.js 18
-  default: "lts/iron"
+    - "lts/krypton"   # Node.js 24
+    - "lts/jod"       # Node.js 22
+  default: "lts/krypton"
   global_packages:
     - "pnpm"
     - "typescript"
-    - "ts-node"
-    - "nodemon"
-    - "@types/node"
 
 # Homebrew packages
 homebrew:
-  taps:
-    - "homebrew/cask"
-    - "homebrew/cask-fonts"
+  taps: []
   formulas:
     - "git"
     - "gh"
-    - "tree"          # Directory visualization
-    - "jq"           # JSON processor
-    - "wget"         # File downloader
+    - "jq"
     - "ripgrep"      # Fast search tool
     - "fd"           # Fast find alternative
+    - "tree"
+    - "wget"
+    - "oven-sh/bun/bun"
+    - "deno"
   casks:
     - "visual-studio-code"
     - "iterm2"
     - "docker"
-    - "arc"          # Modern browser
-    - "warp"         # Modern terminal
-    - "1password"    # Password manager
+    - "1password"
 
-# System preferences
+# macOS preferences (omit a key to leave that setting alone)
 macos:
   dock:
-    autohide: true           # Auto-hide the dock
-    magnification: true      # Enable dock magnification
+    autohide: true
+    magnification: false
     minimize-to-application: true
   keyboard:
-    key_repeat: 2            # Fast key repeat
-    initial_key_repeat: 15   # Short delay before repeat
+    key_repeat: 2            # Lower is faster
+    initial_key_repeat: 15   # Lower is a shorter delay
   finder:
+    show_all_extensions: true
     show_hidden_files: true
     show_path_bar: true
+    show_status_bar: true
+  developer_mode: false      # Enable DevToolsSecurity (asks for your password)
 
-# Cron configuration
+# Scheduled package updates (Homebrew, global npm packages, App Store via mas)
 cron:
   update_schedule:
     enabled: true
-    frequency: "daily"    # Options: daily, weekly, monthly
-    time: "00:00"        # 24-hour format
-    days: ["Sunday"]     # For weekly/monthly: which days to run
-  terminal_update:
-    enabled: true        # Check for updates when opening terminal
-    frequency: 86400     # Minimum seconds between checks (24h)
-
-# CLI configuration
-cli:
-  alias: "zapz"         # Command alias
-  auto_alias: true      # Automatically add alias to shell config
-  update_notifications: true  # Show update notifications
+    frequency: "weekly"   # daily, weekly or monthly (monthly runs on the 1st)
+    time: "09:00"         # 24-hour HH:MM
+    days: ["Monday"]      # Weekly only; one or more day names

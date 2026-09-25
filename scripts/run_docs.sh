@@ -54,6 +54,9 @@ main() {
     # Ensure we're in the docs directory
     cd "$(dirname "$0")/../docs"
 
+    # The home page is generated from the README (same as the Pages workflow)
+    sed 's|](docs/|](|g' ../README.md > index.md
+
     # Process command line arguments
     local CLEAN=0
     while [[ $# -gt 0 ]]; do

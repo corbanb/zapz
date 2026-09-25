@@ -1,46 +1,29 @@
 #!/usr/bin/env bash
 
-# Script to set up git hooks
+# Install a git pre-commit hook that lints and runs the fast test suites
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# Source utilities for logging
+# shellcheck source=../lib/logging.sh
 source "${PROJECT_ROOT}/lib/logging.sh"
 
-# Create hooks directory if it doesn't exist
-mkdir -p "${PROJECT_ROOT}/.git/hooks"
+hooks_dir="$(git -C "$PROJECT_ROOT" rev-parse --git-path hooks)"
+mkdir -p "$hooks_dir"
 
-# Create pre-commit hook
-cat > "${PROJECT_ROOT}/.git/hooks/pre-commit" << 'EOF'
+cat > "$hooks_dir/pre-commit" << 'EOF'
 #!/usr/bin/env bash
+set -e
+cd "$(git rev-parse --show-toplevel)"
 
-# Get the project root directory
-PROJECT_ROOT="$(git rev-parse --show-toplevel)"
-
-# Source logging utilities
-source "${PROJECT_ROOT}/lib/logging.sh"
-
-log_header "Running pre-commit checks..."
-
-# Run linting
-log_info "Running linting checks..."
-"${PROJECT_ROOT}/test/run_actions.sh" local lint || {
-    log_error "Linting failed. Please fix errors before committing."
-    exit 1
-}
-
-# Run core tests
-log_info "Running core tests..."
-"${PROJECT_ROOT}/test/test.sh" || {
-    log_error "Tests failed. Please fix errors before committing."
-    exit 1
-}
-
-log_success "All pre-commit checks passed!"
+if command -v shellcheck >/dev/null; then
+    shellcheck -x setup.sh install.sh lib/*.sh lib/modules/*.sh test/*.sh scripts/*.sh
+fi
+if command -v yamllint >/dev/null; then
+    yamllint -c .yamllint .github config/default.yml.example .yamllint
+fi
+bash test/test.sh >/dev/null
+bash test/test_modules.sh >/dev/null
 EOF
 
-# Make the hook executable
-chmod +x "${PROJECT_ROOT}/.git/hooks/pre-commit"
-
-log_success "Git hooks installed successfully!"
-EOF
+chmod +x "$hooks_dir/pre-commit"
+log_success "Installed pre-commit hook in $hooks_dir"

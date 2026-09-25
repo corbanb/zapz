@@ -2,61 +2,78 @@
 
 setup_homebrew() {
     log_header "Setting up Homebrew"
-    
-    # Install Homebrew if not already installed
+
+    # brew may be installed but not on this shell's PATH (common on Apple Silicon)
+    if ! command_exists brew; then
+        load_brew_shellenv || true
+    fi
+
     if ! command_exists brew; then
         log_info "Installing Homebrew..."
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-        
-        # Add Homebrew to PATH for Apple Silicon Macs
-        if [[ "$(uname -m)" == "arm64" ]]; then
-            echo "eval \"\$(/opt/homebrew/bin/brew shellenv)\"" >> "$HOME/.zprofile"
-            eval "$(/opt/homebrew/bin/brew shellenv)"
+        if ! load_brew_shellenv; then
+            log_error "Homebrew installation failed"
+            exit 1
         fi
     else
         log_success "Homebrew already installed"
     fi
-    
-    # Update Homebrew
+
+    # Make brew available in future login shells
+    write_managed_block "$(shell_profile_file)" "homebrew" "eval \"\$($(command -v brew) shellenv)\""
+
+    # yq is needed to read package lists from the config
+    ensure_yq
+    validate_configuration
+
     log_info "Updating Homebrew..."
     brew update
-    
-    # Install taps
+
+    # Keep going when a single package fails; report them all at the end
+    local failed=()
+
     log_info "Installing Homebrew taps..."
+    local tap
     while IFS= read -r tap; do
-        if [[ -n "$tap" ]]; then
-            if ! brew tap | grep -q "^${tap}$"; then
-                log_debug "Adding tap: $tap"
-                brew tap "$tap"
-            fi
+        [[ -n "$tap" ]] || continue
+        if ! brew tap | grep -qx "$tap"; then
+            log_debug "Adding tap: $tap"
+            brew tap "$tap" || failed+=("tap $tap")
         fi
-    done < <(yq e '.homebrew.taps[]' "$CONFIG_FILE")
-    
-    # Install formulas
+    done < <(config_list '.homebrew.taps')
+
     log_info "Installing Homebrew formulas..."
+    local formula
     while IFS= read -r formula; do
-        if [[ -n "$formula" ]]; then
-            if ! is_formula_installed "$formula"; then
-                log_debug "Installing formula: $formula"
-                brew install "$formula"
-            else
-                log_debug "Formula already installed: $formula"
-            fi
+        [[ -n "$formula" ]] || continue
+        if is_formula_installed "$formula"; then
+            log_debug "Formula already installed: $formula"
+        else
+            log_debug "Installing formula: $formula"
+            brew install "$formula" || failed+=("formula $formula")
         fi
-    done < <(yq e '.homebrew.formulas[]' "$CONFIG_FILE")
-    
-    # Install casks
+    done < <(config_list '.homebrew.formulas')
+
     log_info "Installing Homebrew casks..."
+    local cask
     while IFS= read -r cask; do
-        if [[ -n "$cask" ]]; then
-            if ! is_app_installed "$cask"; then
-                log_debug "Installing cask: $cask"
-                brew install --cask "$cask"
-            else
-                log_debug "Cask already installed: $cask"
-            fi
+        [[ -n "$cask" ]] || continue
+        if is_app_installed "$cask"; then
+            log_debug "Cask already installed: $cask"
+        else
+            log_debug "Installing cask: $cask"
+            # Fails if the app was installed outside Homebrew; that's fine to skip
+            brew install --cask "$cask" || failed+=("cask $cask")
         fi
-    done < <(yq e '.homebrew.casks[]' "$CONFIG_FILE")
-    
-    log_success "Homebrew setup completed"
-} 
+    done < <(config_list '.homebrew.casks')
+
+    if ((${#failed[@]} > 0)); then
+        log_warning "Some Homebrew packages could not be installed:"
+        local item
+        for item in "${failed[@]}"; do
+            log_warning "  $item"
+        done
+    else
+        log_success "Homebrew setup completed"
+    fi
+}

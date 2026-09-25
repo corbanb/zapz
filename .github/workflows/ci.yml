@@ -1,0 +1,74 @@
+---
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  YQ_VERSION: v4.53.6
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install linters
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck yamllint
+
+      - name: ShellCheck
+        run: shellcheck -x setup.sh install.sh lib/*.sh lib/modules/*.sh test/*.sh scripts/*.sh
+
+      - name: yamllint
+        run: yamllint -c .yamllint .github config/default.yml.example .yamllint
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zsh
+          sudo curl -fsSL -o /usr/local/bin/yq \
+            "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew list yq >/dev/null 2>&1 || brew install yq
+
+      # On macOS, /bin/bash is 3.2, the version zapz actually runs under
+      - name: Run tests
+        run: /bin/bash test/run_tests.sh
+
+  pr-title:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR title follows Conventional Commits
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9-]+\))?!?: .+'
+          if ! grep -qE "$pattern" <<< "$TITLE"; then
+            echo "::error::PR title must look like 'feat: add thing' or 'fix(scope): fix thing'"
+            exit 1
+          fi

@@ -45,3 +45,6 @@ node_modules/
 
 # System
 *.log
+
+# Generated from README.md by the Pages workflow and scripts/run_docs.sh
+docs/index.md

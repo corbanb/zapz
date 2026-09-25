@@ -1,161 +1,87 @@
 # Contributing to zapz
 
-Thank you for your interest in contributing to zapz! This document provides guidelines and workflows to ensure smooth collaboration.
+Thanks for helping out! This covers setting up, testing, and opening a pull
+request.
 
-## Development Workflow
-
-### 1. Setting Up Your Development Environment
+## Setup
 
 ```bash
-# Clone the repository
 git clone https://github.com/corbanb/zapz.git
 cd zapz
+brew install yq shellcheck yamllint
 
-# Install dependencies
-brew install act shellcheck yamllint
-
-# Set up git hooks
+# Optional: lint and run the fast tests before every commit
 ./scripts/setup-hooks.sh
-
-# Copy and configure secrets
-cp .secrets.example .secrets
-# Edit .secrets with your GitHub token
 ```
 
-### 2. Development Process
+## Project layout
 
-#### Before Making Changes
+```text
+setup.sh                  The `zapz` command: parses options, runs modules in order
+install.sh                The curl | bash installer
+lib/
+  utils.sh                Config helpers (config_get, config_list, ...) and shared functions
+  logging.sh, version.sh
+  check_update.sh         Update notice sourced from users' shells (must work in zsh and bash)
+  maintenance.sh          Run by launchd for scheduled updates
+  modules/*.sh            One setup step each: xcode, homebrew, git, ssh, node, macos, schedule
+config/default.yml.example
+test/
+```
+
+## Testing
+
 ```bash
-# Create a new branch
-git checkout -b feature/your-feature-name
-
-# Run quick test to ensure clean slate
-./test/run_actions.sh local lint
+./test/run_tests.sh          # everything
+bash test/test_modules.sh    # one suite
 ```
 
-#### During Development
-Use VS Code tasks (Cmd/Ctrl + Shift + P, then "Run Task"):
-- "Quick Test": Fast validation during development
-- "Lint Only": Check code style
-- "Run All Tests": Full test suite
-- "Check PR Ready": Complete validation before PR
+- `test/test.sh`: syntax, shellcheck, bash 3.2 compatibility and config
+  loading.
+- `test/test_modules.sh`: runs each module in a sandbox and checks what it
+  changed.
+- `test/test_install.sh`: runs `install.sh` in a sandbox.
 
-Or run from terminal:
-```bash
-# Quick validation
-./test/run_actions.sh local lint
+Tests use a temporary `HOME` and stub commands such as `brew`, `defaults`,
+`launchctl` and `sudo` (see `test/helpers.sh`). They never touch your real
+system, and they run on Linux too.
 
-# Full test suite
-./test/run_tests.sh
+When you change a module, add a test to `test/test_modules.sh` that runs the
+module and checks the result. Where it matters, run it twice and check that
+nothing was duplicated.
 
-# All workflows
-./test/run_actions.sh local all
-```
+## Code guidelines
 
-#### Before Committing
-The pre-commit hook will automatically run:
-- Linting checks
-- Core tests
-- Secrets detection
+- **bash 3.2.** zapz runs under macOS's `/bin/bash`, so no associative
+  arrays, `${var,,}`, `mapfile` or `&>>`. `test/test.sh` checks for these, and
+  CI runs the suite under `/bin/bash` on macOS.
+- **Safe to re-run.** Check before installing. Write shell rc changes with
+  `write_managed_block` instead of appending.
+- **Config.** Read values with `config_get`, `config_list` and
+  `config_enabled`. They treat missing keys as unset, so users can delete any
+  section.
+- **Don't abort on one bad package.** Report it and continue, the way
+  `setup_homebrew` does.
+- Follow the [Google Shell Style Guide](https://google.github.io/styleguide/shellguide.html),
+  and keep shellcheck and yamllint clean.
 
-#### Before Pushing
-The pre-push hook will automatically run:
-- Full test suite
-- All workflows locally
+## Pull requests
 
-### 3. Creating Pull Requests
+- Use a [Conventional Commits](https://www.conventionalcommits.org) title,
+  like `feat: add fish shell support` or `fix(ssh): keep existing config`. CI
+  checks it.
+- Describe what changed and how you tested it.
+- Update the README and `docs/` if you change behavior or config options.
 
-1. **Prepare Your Changes**
-```bash
-# Ensure all tests pass
-./test/run_actions.sh local all --with-release
+## Releasing
 
-# Update documentation if needed
-vim docs/documentation.md  # or use your preferred editor
-```
+1. Bump `ZAPZ_VERSION` in `lib/version.sh` and add a `CHANGELOG.md` entry.
+2. After merging, tag the commit: `git tag v0.2.0 && git push origin v0.2.0`.
 
-2. **Create Pull Request**
-- Use conventional commit format for PR title:
-  - Format: `type(scope): description`
-  - Types: feat, fix, docs, style, refactor, test, chore
-  - Example: `feat(core): add new installation option`
-
-3. **PR Requirements**
-- Detailed description of changes
-- All checks passing
-- Documentation updated (if applicable)
-- No draft status
-- No auto-merge enabled
-
-### 4. Running GitHub Actions Locally
-
-#### Using VS Code
-1. Open Command Palette (Cmd/Ctrl + Shift + P)
-2. Type "Run Task"
-3. Choose desired test task
-
-#### Using Terminal
-```bash
-# Run specific workflows
-./test/run_actions.sh local lint    # Linting only
-./test/run_actions.sh local test    # Test suite
-./test/run_actions.sh local docs    # Documentation
-
-# Run all workflows
-./test/run_actions.sh local all
-
-# Run with release workflow
-./test/run_actions.sh local all --with-release
-```
-
-#### Running on GitHub
-```bash
-# Run workflows remotely
-./test/run_actions.sh remote lint
-./test/run_actions.sh remote all
-```
-
-### 5. Troubleshooting
-
-#### Common Issues
-
-1. **Workflow Permission Errors**
-```bash
-# Check secrets file
-cat ~/.local/bin/.secrets
-# Ensure GITHUB_TOKEN is set correctly
-```
-
-2. **Local Action Runner Issues**
-```bash
-# Update act
-brew upgrade act
-
-# Clean Docker containers
-docker system prune
-```
-
-3. **Test Failures**
-```bash
-# Run with verbose output
-VERBOSE=true ./test/run_tests.sh
-
-# Check specific workflow
-./test/run_actions.sh local lint -v
-```
-
-### 6. Code Style
-
-- Shell scripts: Follow [Google Shell Style Guide](https://google.github.io/styleguide/shellguide.html)
-- YAML: Follow [YAML Style Guide](https://yamllint.readthedocs.io/en/stable/rules.html)
-- Markdown: Use [CommonMark](https://commonmark.org/) specification
-
-### 7. Getting Help
-
-- Open an issue for bugs or feature requests
-- Join discussions in existing issues
-- Check the [documentation](https://corbanb.github.io/zapz)
+The release workflow checks that the tag matches `lib/version.sh`, then
+publishes a GitHub release.
 
 ## License
 
-By contributing to zapz, you agree that your contributions will be licensed under the MIT License.
+By contributing, you agree that your contributions will be licensed under the
+MIT License.
