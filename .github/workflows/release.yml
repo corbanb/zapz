@@ -1,103 +1,31 @@
 ---
-name: Release Management
+# Publish a GitHub release when a version tag is pushed:
+#   git tag v0.2.0 && git push origin v0.2.0
+name: Release
 
 on:
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened]
   push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
+    tags: ['v*']
+
+permissions:
+  contents: write
 
 jobs:
   release:
-    runs-on: macos-latest
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v4
 
-      - name: Check for existing tags
-        id: check_tags
+      - name: Check tag matches lib/version.sh
         run: |
-          # Get all tags sorted by version
-          if ! git tag | grep -q "^v"; then
-            echo "has_tags=false" >> $GITHUB_OUTPUT
-            echo "next_version=v0.1.0" >> $GITHUB_OUTPUT
-          else
-            echo "has_tags=true" >> $GITHUB_OUTPUT
-            # Get latest tag and increment patch version
-            latest_tag=$(git tag -l "v*" | sort -V | tail -n1)
-            current_version=${latest_tag#v}
-            major=$(echo $current_version | cut -d. -f1)
-            minor=$(echo $current_version | cut -d. -f2)
-            patch=$(echo $current_version | cut -d. -f3)
-            next_patch=$((patch + 1))
-            next_version="v$major.$minor.$next_patch"
-            echo "next_version=$next_version" >> $GITHUB_OUTPUT
+          source lib/version.sh
+          if [[ "${GITHUB_REF_NAME}" != "v${ZAPZ_VERSION}" ]]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match ZAPZ_VERSION=${ZAPZ_VERSION} in lib/version.sh"
+            exit 1
           fi
 
-      - name: Configure Git
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-
-      - name: Create or Update Tag
-        if: steps.check_tags.outputs.has_tags == 'false'
-        run: |
-          if ! git rev-parse "v0.1.0" >/dev/null 2>&1; then
-            echo "Creating initial v0.1.0 tag"
-            git tag -a v0.1.0 -m "Initial release"
-            git push origin v0.1.0
-          else
-            echo "Initial tag v0.1.0 already exists, skipping creation"
-          fi
-
-      - name: Generate Changelog
-        id: changelog
-        uses: mikepenz/release-changelog-builder-action@v4
+      - name: Create release
+        uses: softprops/action-gh-release@v2
         with:
-          failOnError: false
-          configuration: |
-            {
-              "template": "#{{CHANGELOG}}\n\n<details>\n<summary>Uncategorized</summary>\n\n#{{UNCATEGORIZED}}\n</details>",
-              "categories": [
-                {
-                    "title": "## 🚀 Features",
-                    "labels": ["feature", "enhancement"]
-                },
-                {
-                    "title": "## 🐛 Fixes",
-                    "labels": ["fix", "bug"]
-                },
-                {
-                    "title": "## 📝 Documentation",
-                    "labels": ["documentation"]
-                },
-                {
-                    "title": "## 🧰 Maintenance",
-                    "labels": ["chore", "dependencies"]
-                }
-              ]
-            }
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          body: ${{steps.changelog.outputs.changelog}}
-          files: |
-            install.sh
-            LICENSE
-            README.md
-          draft: false
-          prerelease: false
-          generate_release_notes: ${{ steps.changelog.outputs.changelog == '' }}
+          generate_release_notes: true
+          files: install.sh
