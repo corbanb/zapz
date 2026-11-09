@@ -5,7 +5,7 @@ All notable changes to zapz will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0] - Unreleased
+## [0.3.0] - 2026-11-09
 
 Set up a Mac for the way you work, not just for web development.
 
@@ -53,7 +53,7 @@ Set up a Mac for the way you work, not just for web development.
   so zapz asks for it up front when an App Store app is missing. Scheduled
   updates run `mas upgrade` only when sudo works without a password.
 
-## [0.2.0] - Unreleased
+## [0.2.0] - 2026-11-09
 
 The first version that installs and runs end to end on a fresh Mac.
 
