@@ -5,7 +5,55 @@ All notable changes to zapz will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - Unreleased
+## [0.3.0] - 2026-11-09
+
+Set up a Mac for the way you work, not just for web development.
+
+### Added
+- Personas: pick any of software development, AI building, mobile apps,
+  game development, data science, video editing, content & streaming,
+  design and team collaboration. Each adds its apps and tools to the
+  essentials, with a short screen of optional picks (★ marks the
+  recommended ones; Enter takes them).
+- Extras for anyone: meeting notes (Granola, Krisp, Meetily, Anarlog),
+  voice dictation (Wispr Flow, Superwhisper, Aqua Voice, MacWhisper,
+  VoiceInk, Handy, OpenWhispr, Buzz), local AI models (Ollama, LM Studio)
+  and Raycast.
+- Video editors to choose from: DaVinci Resolve, Final Cut Pro, Premiere
+  Pro and Instagram's Edits. AI agent tools: Conductor, T3 Code, Paperclip,
+  Codex, Antigravity CLI, OpenCode.
+- A Security step: Touch ID for `sudo`, the firewall on, and a FileVault
+  check.
+- A Terminal & shell step: Ghostty (recommended), iTerm2, Warp or
+  Terminal, and Oh My Zsh with autosuggestions, syntax highlighting and the
+  Starship prompt (or just Starship, or nothing).
+- Languages through mise (Node.js, Python, Bun, Go, Rust…), also updated by
+  scheduled updates.
+- App Store apps through `mas`, and a "Things only you can do" checklist
+  at the end for App Store purchases, downloads behind a sign-up and app
+  sign-ins, with links to open.
+- A Screenshots folder setting.
+- The preview shows who the setup is for, friendly app names, what will
+  need you, and a time estimate.
+- A weekly check that every app in the catalog is still in Homebrew.
+
+### Changed
+- The three presets are replaced by the persona catalog in `catalog/`.
+- New configs use mise instead of nvm; `node.*` configs still work.
+- The run ends with "Your Mac is ready" and the checklist first.
+- Essentials add git-lfs, fzf, bat, eza, zoxide, btop, tlrc, mas, The
+  Unarchiver, AppCleaner and a Nerd Font; Raycast is optional.
+- Security settings are opt-in: configs from older versions (with no
+  `security` section) are never changed; the wizard turns all three on.
+- An unattended install (no terminal) gets the recommended config instead
+  of the example; `--dry-run` before any config previews it.
+- Follow-ups such as adding your SSH key to GitHub moved from "Next" into
+  the checklist, with links.
+- App Store installs need your administrator password (mas requires it),
+  so zapz asks for it up front when an App Store app is missing. Scheduled
+  updates run `mas upgrade` only when sudo works without a password.
+
+## [0.2.0] - 2026-11-09
 
 The first version that installs and runs end to end on a fresh Mac.
 

@@ -59,19 +59,48 @@ Running the installer again updates an existing install and keeps your config.
 
 ## The setup wizard
 
-The wizard asks:
+The wizard asks everything up front, in a few short screens, and changes
+nothing on your Mac. Every question has a recommended answer marked **★**;
+pressing Enter takes it. Answer with numbers, like `1 3`, and `0` for none.
 
-- your name and email, for git commits (your current `git config` values are
-  offered as defaults);
-- what to install, as a preset: **Essentials** (command-line tools, VS Code,
-  iTerm2), **Web development** (Essentials plus Node.js, Bun, Deno, Docker
-  Desktop and 1Password; the default) or **Minimal** (command-line tools only);
-- whether to apply recommended macOS settings (Dock, Finder, key repeat);
-- whether to keep your apps and tools updated automatically (Mondays at 09:00).
+1. **Who's setting up this Mac?** Your name and email, for git commits and
+   your SSH key. Your current `git config` values (or your Mac account name)
+   are offered as defaults.
+2. **What will you use this Mac for?** Pick any of nine personas: Software
+   development, AI building, Mobile apps, Game development, Data science,
+   Video editing, Content & streaming, Design and Team collaboration. Press
+   Enter for just the essentials. Everyone gets the essentials: git, the
+   GitHub CLI, git-lfs and modern command-line tools (jq, ripgrep, fd, fzf,
+   bat, eza, zoxide, btop, tlrc, mas, wget), 1Password, The Unarchiver,
+   AppCleaner and the JetBrains Mono Nerd Font.
+3. **A few extras people love.** Optional: Meeting notes, Voice dictation,
+   Local AI models and Raycast.
+4. **Your picks.** A short screen for each question that comes with your
+   choices: which browser (Chrome ★, Firefox, Brave or Safari only) and cloud
+   storage (Google Drive, Dropbox) for everyone, then, for example, which
+   container tool for Software development or which editors for Video
+   editing. [Personas and Extras]({{ site.baseurl }}/docs/personas/) lists
+   what each choice installs and what each question offers.
+5. **Which terminal do you want?** Ghostty ★ (zapz sets its font), iTerm2,
+   Warp, or keep Apple's Terminal.
+6. **Make your shell friendlier?** Recommended ★ (Oh My Zsh,
+   autosuggestions, syntax highlighting and the Starship prompt), Light (just
+   the Starship prompt), or Leave it alone. zapz's shell changes go in one
+   marked block in your shell startup file, so they're easy to remove.
+7. **Last two.** Whether to apply recommended macOS settings (Dock, Finder,
+   key repeat, a Screenshots folder), and whether to keep your apps and tools
+   updated automatically (Mondays at 09:00).
 
 It writes the answers to `~/.local/share/zapz/config/default.yml`. Edit that
 file any time, or run the wizard again with `zapz --configure`. See
 [Configuration]({{ site.baseurl }}/configuration/) for every setting.
+
+Not everything can be installed for you. App Store apps (like Final Cut Pro)
+need you signed in to the App Store, and paid apps bought first. Some apps
+are guided downloads (DaVinci Resolve, Edits by Instagram, Aseprite): zapz
+opens their download page at the end. A few are commands for you to run
+(Paperclip, or installing Xcode with `xcodes install --latest`, which asks
+for your Apple ID). These are listed in the preview and again at the end.
 
 ## Usage
 
@@ -82,7 +111,11 @@ zapz
 ```
 
 zapz shows what it will install and change, and what you already have, then
-asks `Continue? [Y/n]`. To see the preview without changing anything:
+asks `Continue? [Y/n]`. The preview lists who it's set up for (your
+personas), the security settings, apps by their friendly names, languages,
+your terminal and shell, App Store apps, a "You'll need to:" list of things
+only you can do, and a rough time estimate. To see the preview without
+changing anything:
 
 ```bash
 zapz --dry-run
@@ -92,16 +125,29 @@ zapz --dry-run
 
 - **Questions first.** Before the long part starts, zapz asks for anything it
   needs: your git name and email if they aren't set anywhere, and your Mac
-  password once (for Homebrew, apps and Developer Mode). The SSH key
-  passphrase is asked when the key is created, early in the run.
-- **Then hands-off.** Homebrew, apps and Node.js install without you. Each item
-  gets one line: `✓` changed, `·` already set, `-` skipped, `✗` failed. A
-  package that fails doesn't stop the rest.
+  password once (for Homebrew, apps, the security settings and Developer
+  Mode). The SSH key passphrase is asked when the key is created, early in the
+  run.
+- **Then hands-off.** The steps that apply to your config run in order, without
+  you: Command Line Tools, Security, Git, SSH key, Homebrew, Languages,
+  Terminal & shell, App Store, macOS settings, Scheduled updates and GitHub.
+  Each item gets one line: `✓` changed, `·` already set, `-` skipped, `✗`
+  failed. A package that fails doesn't stop the rest.
+- **Security.** Touch ID for `sudo` and the macOS firewall are turned on.
+  zapz checks FileVault but never turns it on itself, since macOS shows a
+  recovery key you must save; if it's off, it's added to the checklist. Turn
+  any of these off in the [`security`]({{ site.baseurl }}/configuration/#security)
+  section.
+- **Terminal and shell.** For Ghostty, zapz sets the font and spacing. For
+  iTerm2, Warp or Terminal, it adds a checklist item to set the font
+  yourself. Open a new terminal afterwards to see the new shell.
 - **GitHub at the end.** If the GitHub CLI is installed and you aren't signed
   in, zapz offers to sign in through your browser, which can upload your new
   SSH key.
-- **A summary and a notification.** The summary counts what changed and what
-  was already set, lists any problems and next steps, and names the log file.
+- **"Your Mac is ready ⚡".** The summary counts what changed and what was
+  already set and lists any problems. Then comes **Things only you can do**: a
+  numbered checklist of downloads, sign-ins and commands to run, and an offer
+  to open its links. Then next steps, the log file and where backups went.
   Long runs end with a macOS notification, so you can walk away.
 
 ### Logs and backups
@@ -168,6 +214,7 @@ Your packages are kept up to date separately by the scheduled updates in the
 
 ## More
 
+- [Personas and Extras]({{ site.baseurl }}/docs/personas/): what each wizard choice installs
 - [Examples]({{ site.baseurl }}/docs/examples/): complete configs for common setups
 - [Recipes]({{ site.baseurl }}/docs/recipes/): short answers to common tasks
 - [README on GitHub](https://github.com/corbanb/zapz/blob/main/README.md)

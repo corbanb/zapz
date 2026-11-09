@@ -119,6 +119,10 @@ setup_sandbox() {
         stub "$name"
     done
     stub_brew
+    # The wizard suggests the account's full name (id -F on macOS); keep the
+    # runner's own name out of tests. Write $STUB_STATE/full_name to set one.
+    stub id '[[ "${1:-}" == -F ]] && { cat "$STUB_STATE/full_name" 2>/dev/null; exit; }
+exec /usr/bin/id "$@"'
 }
 
 # Create a stub that records its arguments and runs an optional body
@@ -187,6 +191,8 @@ load_zapz() {
     source "$PROJECT_ROOT/lib/utils.sh"
     # shellcheck source=../lib/plan.sh
     source "$PROJECT_ROOT/lib/plan.sh"
+    # shellcheck source=../lib/catalog.sh
+    source "$PROJECT_ROOT/lib/catalog.sh"
     # shellcheck source=../lib/configure.sh
     source "$PROJECT_ROOT/lib/configure.sh"
     local module

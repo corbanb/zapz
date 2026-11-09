@@ -1,0 +1,29 @@
+---
+id: team
+title: Team collaboration
+tagline: Slack, Zoom, Notion
+order: 9
+core:
+  - kind: cask
+    name: slack
+    label: Slack
+    then: Sign in to Slack
+  - kind: cask
+    name: zoom
+    label: Zoom
+  - kind: cask
+    name: notion
+    label: Notion
+  - kind: cask
+    name: notion-calendar
+    label: Notion Calendar
+  - kind: cask
+    name: obsidian
+    label: Obsidian
+picks:
+  - question: Anything else?
+    multi: true
+    items:
+      - kind: cask
+        name: discord
+        label: Discord

@@ -37,21 +37,22 @@ test_executable_bits() {
 
 test_every_module_defines_its_entry_point() {
     local pair
-    for pair in xcode:install_xcode_tools homebrew:setup_homebrew git:setup_git ssh:setup_ssh \
-            node:setup_node macos:setup_macos_preferences schedule:setup_scheduled_updates; do
+    for pair in xcode:install_xcode_tools security:setup_security homebrew:setup_homebrew \
+            git:setup_git ssh:setup_ssh languages:setup_languages node:setup_node \
+            terminal:setup_terminal_shell appstore:setup_app_store macos:setup_macos_preferences \
+            schedule:setup_scheduled_updates; do
         grep -q "^${pair#*:}()" "$PROJECT_ROOT/lib/modules/${pair%%:*}.sh" \
             || fail "${pair%%:*}.sh does not define ${pair#*:}"
-        grep -q "${pair#*:}$" "$PROJECT_ROOT/setup.sh" || fail "setup.sh never calls ${pair#*:}"
+        grep -qw "${pair#*:}" "$PROJECT_ROOT/setup.sh" || fail "setup.sh never runs ${pair#*:}"
     done
 }
 
 test_example_config_shape() {
     yq e '.' "$EXAMPLE_CONFIG" > /dev/null
     local path
-    for path in .homebrew.formulas .homebrew.casks .node.versions; do
+    for path in .homebrew.formulas .homebrew.casks .languages.tools .checklist; do
         [[ "$(yq e "$path | length" "$EXAMPLE_CONFIG")" -gt 0 ]] || fail "$path is empty"
     done
-    [[ -n "$(yq e '.node.default // ""' "$EXAMPLE_CONFIG")" ]] || fail ".node.default is missing"
     assert_eq "$(yq e '.cron.update_schedule.enabled | tag' "$EXAMPLE_CONFIG")" "!!bool"
 }
 

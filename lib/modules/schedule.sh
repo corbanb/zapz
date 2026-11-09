@@ -165,7 +165,7 @@ EOF
         ui_item changed "Scheduled updates" "$description"
     else
         ui_item failed "Scheduled updates" "couldn't load the launch agent"
-        add_next_step "Load scheduled updates: launchctl bootstrap gui/$(id -u) $(tilde_path "$plist")"
+        add_checklist "Turn on scheduled updates" "" "launchctl bootstrap gui/$(id -u) $(tilde_path "$plist")"
     fi
 }
 

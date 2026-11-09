@@ -1,0 +1,13 @@
+---
+id: local-ai
+title: Local AI models
+tagline: Ollama, LM Studio
+order: 3
+core:
+  - kind: cask
+    name: ollama-app
+    label: Ollama
+  - kind: cask
+    name: lm-studio
+    label: LM Studio
+picks: []

@@ -1,0 +1,80 @@
+---
+id: ai
+title: AI building
+tagline: Claude, ChatGPT, Cursor, agent tools
+order: 2
+core:
+  - kind: cask
+    name: claude
+    label: Claude
+    then: Sign in to Claude
+  - kind: cask
+    name: claude-code
+    label: Claude Code
+  - kind: cask
+    name: chatgpt
+    label: ChatGPT
+    then: Sign in to ChatGPT
+  - kind: cask
+    name: cursor
+    label: Cursor
+  - kind: formula
+    name: mise
+  - kind: mise
+    name: node@lts python@3.13
+    label: Node.js and Python
+  - kind: formula
+    name: uv
+  - kind: formula
+    name: jupyterlab
+    label: JupyterLab
+picks:
+  - question: Run several coding agents at once?
+    multi: true
+    items:
+      - kind: cask
+        name: conductor
+        label: Conductor
+        note: parallel Claude Code and Codex agents
+        recommended: true
+      - kind: cask
+        name: t3-code
+        label: T3 Code
+        note: one app for Claude Code, Codex and Cursor
+      - kind: command
+        label: Paperclip
+        run: npx paperclipai@latest onboard --yes
+        note: runs AI agents as a company (open source)
+  - question: More AI tools?
+    multi: true
+    items:
+      - kind: cask
+        name: codex
+        label: Codex CLI
+        note: OpenAI's coding agent
+      - kind: cask
+        name: antigravity-cli
+        label: Antigravity CLI
+        note: Google's Gemini agents in the terminal
+      - kind: formula
+        name: opencode
+        label: OpenCode
+        note: open-source coding agent
+      - kind: cask
+        name: cursor-cli
+        label: Cursor CLI
+      - kind: cask
+        name: perplexity
+        label: Perplexity
+        note: AI answer engine
+      - kind: formula
+        name: llm
+        note: talk to models from the command line
+      - kind: cask
+        name: mstystudio
+        label: Msty Studio
+        note: local and online models in one app
+      - kind: cask
+        name: jan
+        label: Jan
+        note: open-source ChatGPT alternative

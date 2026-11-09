@@ -1,0 +1,75 @@
+---
+id: developer
+title: Software development
+tagline: editors, containers, languages
+order: 1
+core:
+  - kind: cask
+    name: visual-studio-code
+    label: VS Code
+  - kind: formula
+    name: mise
+  - kind: mise
+    name: node@lts bun@latest pnpm@latest python@3.13
+    label: Node.js, Bun, pnpm, Python
+  - kind: formula
+    name: uv
+picks:
+  - question: Containers?
+    multi: false
+    items:
+      - kind: cask
+        name: orbstack
+        label: OrbStack
+        note: light and fast; free for personal use
+        recommended: true
+        then: Open OrbStack to finish setup
+      - kind: cask
+        name: docker-desktop
+        label: Docker Desktop
+        note: the official tool; paid for larger companies
+        then: Open Docker Desktop to finish setup
+      - kind: none
+        label: None
+  - question: Anything else?
+    multi: true
+    items:
+      - kind: cask
+        name: cursor
+        label: Cursor
+        note: AI code editor
+        recommended: true
+      - kind: cask
+        name: zed
+        label: Zed
+        note: fast, collaborative editor
+      - kind: cask
+        name: jetbrains-toolbox
+        label: JetBrains Toolbox
+        note: IntelliJ, WebStorm, PyCharm and more
+      - kind: cask
+        name: bruno
+        label: Bruno
+        note: API client
+        recommended: true
+      - kind: cask
+        name: postman
+        label: Postman
+        note: API platform
+      - kind: cask
+        name: tableplus
+        label: TablePlus
+        note: database app
+      - kind: cask
+        name: dbeaver-community
+        label: DBeaver
+        note: free database app
+      - kind: mise
+        name: deno@latest
+        label: Deno
+      - kind: mise
+        name: go@latest
+        label: Go
+      - kind: mise
+        name: rust@latest
+        label: Rust

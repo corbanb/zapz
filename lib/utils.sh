@@ -201,6 +201,7 @@ shell_rc_file() {
 # Write a block into a shell rc file between marker comments. An existing
 # block is replaced where it is, so re-running neither duplicates it nor
 # moves it past lines the user added after it.
+# Sets ZAPZ_BLOCK_CHANGED=true|false.
 # Usage: write_managed_block <file> <name> <content>
 write_managed_block() {
     local file="$1" name="$2" content="$3"
@@ -213,6 +214,7 @@ write_managed_block() {
     # Without an end marker we can't tell where the block stops
     if grep -qxF "$begin" "$file" && ! grep -qxF "$end" "$file"; then
         log_warning "$file has \"$begin\" but no \"$end\"; leaving it unchanged"
+        ZAPZ_BLOCK_CHANGED=false
         return 0
     fi
 
@@ -236,9 +238,36 @@ write_managed_block() {
     # Leave the file alone (no backup, no new timestamp) when nothing changes
     if cmp -s "$tmp" "$file"; then
         rm -f "$tmp"
+        ZAPZ_BLOCK_CHANGED=false
         return 0
     fi
     [[ ! -s "$file" ]] || backup_file "$file"
+    cat "$tmp" > "$file"
+    rm -f "$tmp"
+    ZAPZ_BLOCK_CHANGED=true
+}
+
+# Succeeds if a file contains something outside zapz's own managed blocks
+# (comments ignored). Usage: file_has_outside_blocks <file> <fixed string>
+file_has_outside_blocks() {
+    [[ -f "$1" ]] || return 1
+    awk '/^# >>> zapz .* >>>$/ { skip = 1; next } /^# <<< zapz .* <<<$/ { skip = 0; next } !skip' "$1" \
+        | grep -v '^[[:space:]]*#' | grep -qF -- "$2"
+}
+
+# Remove a managed block (and back the file up first). Succeeds if one was
+# removed. Usage: remove_managed_block <file> <name>
+remove_managed_block() {
+    local file="$1" name="$2"
+    local begin="# >>> zapz ${name} >>>" end="# <<< zapz ${name} <<<" tmp
+    [[ -f "$file" ]] && grep -qxF "$begin" "$file" && grep -qxF "$end" "$file" || return 1
+    tmp=$(mktemp)
+    awk -v b="$begin" -v e="$end" '
+        $0 == b { skipping = 1; next }
+        skipping && $0 == e { skipping = 0; next }
+        !skipping
+    ' "$file" > "$tmp"
+    backup_file "$file"
     cat "$tmp" > "$file"
     rm -f "$tmp"
 }

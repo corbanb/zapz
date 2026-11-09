@@ -1,0 +1,48 @@
+---
+id: data
+title: Data science
+tagline: Positron, Jupyter, DuckDB
+order: 5
+core:
+  - kind: cask
+    name: positron
+    label: Positron
+  - kind: formula
+    name: jupyterlab
+    label: JupyterLab
+  - kind: formula
+    name: duckdb
+    label: DuckDB
+  - kind: cask
+    name: dbeaver-community
+    label: DBeaver
+  - kind: formula
+    name: uv
+  - kind: formula
+    name: mise
+  - kind: mise
+    name: python@3.13
+    label: Python
+picks:
+  - question: Anything else?
+    multi: true
+    items:
+      - kind: cask
+        name: quarto
+        label: Quarto
+        note: reports and notebooks
+        recommended: true
+      - kind: cask
+        name: r-app
+        label: R
+      - kind: cask
+        name: rstudio
+        label: RStudio
+      - kind: cask
+        name: tableau
+        label: Tableau
+        note: paid
+      - kind: cask
+        name: miniconda
+        label: Miniconda
+        note: conda environments

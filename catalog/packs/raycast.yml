@@ -1,0 +1,11 @@
+---
+id: raycast
+title: Raycast
+tagline: a faster Spotlight with window snapping
+order: 4
+core:
+  - kind: cask
+    name: raycast
+    label: Raycast
+    then: Open Raycast and choose a hotkey
+picks: []

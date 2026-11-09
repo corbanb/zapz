@@ -19,7 +19,7 @@ if command -v shellcheck >/dev/null; then
     shellcheck -x setup.sh install.sh lib/*.sh lib/modules/*.sh test/*.sh scripts/*.sh
 fi
 if command -v yamllint >/dev/null; then
-    yamllint -c .yamllint .github config/default.yml.example config/presets .yamllint
+    yamllint -c .yamllint .github config/default.yml.example catalog .yamllint
 fi
 bash test/test.sh >/dev/null
 bash test/test_modules.sh >/dev/null

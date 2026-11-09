@@ -1,0 +1,52 @@
+---
+id: dictation
+title: Voice dictation
+tagline: Wispr Flow, or open-source VoiceInk
+order: 2
+core: []
+picks:
+  - question: Which dictation app?
+    multi: true
+    items:
+      - kind: cask
+        name: wispr-flow
+        label: Wispr Flow
+        group: Paid, polished
+        note: edits as you speak
+        recommended: true
+        then: Sign in to Wispr Flow
+      - kind: cask
+        name: superwhisper
+        label: Superwhisper
+        group: Paid, polished
+        note: choose models and modes
+      - kind: cask
+        name: aqua-voice
+        label: Aqua Voice
+        group: Paid, polished
+        note: fast dictation
+      - kind: cask
+        name: macwhisper
+        label: MacWhisper
+        group: Paid, polished
+        note: transcribe files and meetings
+      - kind: cask
+        name: voiceink
+        label: VoiceInk
+        group: Free and private
+        note: open source; runs on your Mac
+      - kind: cask
+        name: handy
+        label: Handy
+        group: Free and private
+        note: open source; works offline
+      - kind: cask
+        name: openwhispr
+        label: OpenWhispr
+        group: Free and private
+        note: open source
+      - kind: cask
+        name: buzz
+        label: Buzz
+        group: Free and private
+        note: open source; transcribe audio files

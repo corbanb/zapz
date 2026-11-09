@@ -1,0 +1,33 @@
+---
+# Make sure every app and tool the setup wizard offers still exists in
+# Homebrew. Runs weekly (apps get renamed and retired) and when the catalog
+# changes.
+name: Catalog
+
+on:
+  schedule:
+    - cron: '17 9 * * 1'
+  pull_request:
+    paths: ['catalog/**', 'scripts/check-catalog.sh']
+  push:
+    branches: [main]
+    paths: ['catalog/**', 'scripts/check-catalog.sh']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install yq
+        run: |
+          sudo curl -fsSL --retry 4 --retry-all-errors -o /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/download/v4.54.2/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Check Homebrew names
+        run: bash scripts/check-catalog.sh

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-ZAPZ_VERSION="0.2.0"
+ZAPZ_VERSION="0.3.0"
 ZAPZ_MIN_MACOS_VERSION="14"  # Sonoma
 ZAPZ_RECOMMENDED_MACOS_VERSION="15"  # Homebrew fully supports 15+
 ZAPZ_REPO_SLUG="corbanb/zapz"

@@ -51,7 +51,7 @@ setup_git() {
             ui_item existing "$label" "$current"
         else
             ui_item skipped "$label" "not set"
-            add_next_step "Set your git $label: git config --global $key \"...\""
+            add_checklist "Set your git $label" "" "git config --global $key \"...\""
         fi
     done
 

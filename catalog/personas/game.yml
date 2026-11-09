@@ -1,0 +1,38 @@
+---
+id: game
+title: Game development
+tagline: Unity, Godot, Unreal
+order: 4
+core:
+  - kind: cask
+    name: unity-hub
+    label: Unity Hub
+    then: Sign in to Unity Hub and install an editor
+  - kind: cask
+    name: godot
+    label: Godot
+picks:
+  - question: Anything else?
+    multi: true
+    items:
+      - kind: cask
+        name: epic-games
+        label: Epic Games Launcher
+        note: for Unreal Engine
+        then: Install Unreal Engine from the Epic Games Launcher
+      - kind: cask
+        name: blockbench
+        label: Blockbench
+        note: low-poly 3D models
+      - kind: cask
+        name: tiled
+        label: Tiled
+        note: level editor
+      - kind: guided
+        label: Aseprite
+        url: https://www.aseprite.org/
+        note: pixel art (paid)
+      - kind: cask
+        name: blender
+        label: Blender
+        note: 3D; Homebrew may drop it in July 2027

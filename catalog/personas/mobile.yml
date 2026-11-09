@@ -1,0 +1,51 @@
+---
+id: mobile
+title: Mobile apps
+tagline: Xcode, Android Studio, Flutter
+order: 3
+core:
+  - kind: cask
+    name: xcodes-app
+    label: Xcodes
+  - kind: formula
+    name: xcodes
+  - kind: command
+    label: Install Xcode
+    run: xcodes install --latest
+    note: asks for your Apple ID
+  - kind: cask
+    name: android-studio
+    label: Android Studio
+  - kind: cask
+    name: android-platform-tools
+    label: Android platform tools
+  - kind: formula
+    name: cocoapods
+    label: CocoaPods
+  - kind: formula
+    name: watchman
+  - kind: formula
+    name: fastlane
+picks:
+  - question: Anything else?
+    multi: true
+    items:
+      - kind: cask
+        name: flutter
+        label: Flutter
+        note: one codebase for iOS and Android
+      - kind: mise
+        name: node@lts npm:eas-cli
+        label: Expo (EAS CLI)
+        note: React Native builds
+        with:
+          - kind: formula
+            name: mise
+      - kind: cask
+        name: visual-studio-code
+        label: VS Code
+        recommended: true
+      - kind: cask
+        name: cursor
+        label: Cursor
+        note: AI code editor

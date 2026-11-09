@@ -33,6 +33,25 @@ configured_macos_settings() {
         esac
         printf '%s|%s\n' "$label" "$value"
     done
+    value=$(config_get '.macos.screenshots.folder')
+    [[ -z "$value" ]] || printf 'Screenshots folder|%s\n' "$value"
+}
+
+# Save screenshots to a folder instead of the Desktop
+apply_screenshots_folder() {
+    local folder current
+    folder=$(config_get '.macos.screenshots.folder')
+    [[ -n "$folder" ]] || return 0
+    folder="${folder/#\~/$HOME}"
+    mkdir -p "$folder"
+    current=$(defaults read com.apple.screencapture location 2>/dev/null || true)
+    if [[ "$current" == "$folder" ]]; then
+        ui_item existing "Screenshots folder" "$(tilde_path "$folder")"
+    else
+        defaults write com.apple.screencapture location -string "$folder"
+        ui_item changed "Screenshots folder" "$(tilde_path "$folder")"
+        ZAPZ_MACOS_CHANGED=true
+    fi
 }
 
 # Apply one setting, skipping it when macOS already has that value
@@ -88,6 +107,7 @@ setup_macos_preferences() {
         IFS='|' read -r type path domain key label <<< "$entry"
         apply_macos_setting "$type" "$path" "$domain" "$key" "$label"
     done
+    apply_screenshots_folder
 
     # Lets debuggers attach without a password prompt each time; needs admin
     if config_enabled '.macos.developer_mode'; then

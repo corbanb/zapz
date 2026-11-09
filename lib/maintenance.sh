@@ -29,6 +29,11 @@ else
     echo "Homebrew not found; skipping"
 fi
 
+if command -v mise >/dev/null 2>&1; then
+    echo "Updating languages (mise)..."
+    mise upgrade --yes || failed+=("mise")
+fi
+
 export NVM_DIR="$HOME/.nvm"
 if [[ -s "$NVM_DIR/nvm.sh" ]]; then
     # shellcheck disable=SC1091
@@ -39,7 +44,9 @@ if [[ -s "$NVM_DIR/nvm.sh" ]]; then
     fi
 fi
 
-if command -v mas >/dev/null 2>&1; then
+# mas needs administrator rights to update apps, which a background job
+# only has with passwordless sudo; otherwise leave App Store updates to macOS
+if command -v mas >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
     echo "Updating App Store apps..."
     mas upgrade || failed+=("App Store")
 fi

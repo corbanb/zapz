@@ -31,7 +31,7 @@ jobs:
         run: shellcheck -x setup.sh install.sh lib/*.sh lib/modules/*.sh test/*.sh scripts/*.sh
 
       - name: yamllint
-        run: yamllint -c .yamllint .github config/default.yml.example config/presets .yamllint
+        run: yamllint -c .yamllint .github config/default.yml.example catalog .yamllint
 
   test:
     strategy:
@@ -48,7 +48,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq zsh
-          sudo curl -fsSL -o /usr/local/bin/yq \
+          sudo curl -fsSL --retry 4 --retry-all-errors -o /usr/local/bin/yq \
             "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
           sudo chmod +x /usr/local/bin/yq
 
