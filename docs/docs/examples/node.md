@@ -7,7 +7,10 @@ permalink: /docs/examples/node/
 ---
 
 A config for JavaScript and TypeScript work: two Node versions through nvm,
-global packages, Bun and Deno, and the usual command-line tools.
+global packages, Bun and Deno, and the usual command-line tools. It's close to
+the **Web development** preset
+([`config/presets/webdev.yml`](https://github.com/corbanb/zapz/blob/main/config/presets/webdev.yml)),
+which the setup wizard offers by default.
 
 ## Config
 
@@ -54,6 +57,7 @@ cron:
 ## Run it
 
 ```bash
+zapz --dry-run -c node.yml   # preview only
 zapz -c node.yml
 ```
 

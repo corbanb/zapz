@@ -7,8 +7,29 @@ description: Short answers to common tasks
 
 Each recipe is a config snippet or a command. Config snippets go in
 `~/.local/share/zapz/config/default.yml` (or whatever file you pass with `-c`);
-run `zapz` afterwards to apply them. For complete configs, see
-[Examples]({{ site.baseurl }}/docs/examples/).
+run `zapz --dry-run` to see what would change, then `zapz` to apply them. For
+complete configs, see [Examples]({{ site.baseurl }}/docs/examples/).
+
+## Config
+
+### Start over from a preset
+
+Run the setup wizard again and pick Essentials, Web development or Minimal:
+
+```bash
+zapz --configure
+```
+
+Your previous config is backed up to `~/.local/state/zapz/backups/<date-time>/`.
+
+### See what zapz would do
+
+```bash
+zapz --dry-run
+```
+
+Nothing is changed. Combine it with `-c` or `--gist` to check a config before
+applying it.
 
 ## Git
 
@@ -66,8 +87,9 @@ homebrew:
     - "docker-desktop"
 ```
 
-If a cask fails because the app was already installed by hand, zapz reports it
-at the end and carries on. Delete the app or remove it from your config.
+If a cask fails because the app was already installed by hand, zapz lists it in
+the summary and carries on. Delete the app from `/Applications` and run `zapz`
+again, or remove it from your config.
 
 ### Pin Node versions
 
@@ -107,7 +129,8 @@ macos:
   developer_mode: true
 ```
 
-zapz asks for your password to run `DevToolsSecurity -enable`.
+zapz asks for your password once, before setup starts, to run
+`DevToolsSecurity -enable`.
 
 ## Scheduled updates
 
@@ -168,6 +191,17 @@ zapz --update
 curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | ZAPZ_REF=v0.2.0 bash
 ```
 
+By default the installer uses the latest release. `ZAPZ_REF=main` installs the
+latest code from the main branch instead.
+
+### Read the installer before running it
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/corbanb/zapz/main/install.sh
+less install.sh
+bash install.sh
+```
+
 ### Install somewhere else
 
 ```bash
@@ -182,6 +216,29 @@ export ZAPZ_DISABLE_UPDATE_CHECK=1
 
 Add it to `~/.zshrc` to make it permanent.
 
+### Run without prompts (scripts, CI)
+
+```bash
+zapz --yes
+```
+
+Without a terminal, zapz won't start unless you pass `--yes`. The account must
+be able to use `sudo` without a password if Homebrew or apps need installing.
+
+### Find the log of the last run
+
+```bash
+ls -t ~/Library/Logs/zapz/setup-*.log | head -n 1
+```
+
+The summary at the end of each run also prints the log's path.
+
+### Undo a change to a shell or SSH file
+
+zapz copies each file to `~/.local/state/zapz/backups/<date-time>/` before
+editing it. Its own changes are between `# >>> zapz … >>>` and
+`# <<< zapz … <<<` lines, so you can also just delete that block.
+
 ### `zapz: command not found`
 
-Open a new terminal, or run `source ~/.zshrc`.
+Open a new terminal, or run `exec $SHELL -l`.

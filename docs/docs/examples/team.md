@@ -11,7 +11,9 @@ New teammates get the same tools with one command.
 
 ## 1. Write the team config
 
-Leave `git.user` out so zapz keeps each person's own git identity:
+Start from a preset if it helps (see
+[Presets]({{ site.baseurl }}/configuration/#presets)). Leave `git.user` out so
+zapz keeps each person's own git identity:
 
 ```yaml
 git:
@@ -67,18 +69,20 @@ which is useful if you want to pin it.
 ## 3. Onboard a teammate
 
 ```bash
-# Install zapz (on a new Mac this first installs the Command Line Tools)
+# Install zapz (on a new Mac this first installs the Command Line Tools).
+# Answer the wizard's questions, then answer n to "Preview and run setup now?"
+# so the team config is used instead of the personal one.
 curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | bash
 
-# Open a new terminal, then set up from the team config
-zapz --gist https://gist.githubusercontent.com/your-team/abc123/raw/zapz.yml
+# Open a new terminal, then preview the team config
+zapz --dry-run --gist https://gist.githubusercontent.com/your-team/abc123/raw/zapz.yml
 
-# Set your own git identity if you haven't already
-git config --global user.name "Your Name"
-git config --global user.email "you@example.com"
+# Apply it
+zapz --gist https://gist.githubusercontent.com/your-team/abc123/raw/zapz.yml
 ```
 
-zapz warns during setup if `user.name` or `user.email` isn't set yet.
+The team config has no `git.user`, so zapz asks each person for their name and
+email before setup starts, unless git already has them.
 
 The URL must use `https`. zapz downloads it without credentials, so any `https`
 URL that returns the YAML file works, such as a raw file in a public repository.
@@ -86,5 +90,6 @@ URL that returns the YAML file works, such as a raw file in a public repository.
 ## Updating the team config
 
 Edit the gist, then have people run the same `zapz --gist ...` command again.
-Anything already installed is skipped, so only the new packages are added.
+The preview shows what's new before anything changes, and anything already
+installed is reported as already set, so only the new packages are added.
 zapz doesn't uninstall packages you remove from the list.
