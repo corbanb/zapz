@@ -520,6 +520,102 @@ YAML
     [[ "$out" == *"Things only you can do"*"Download DaVinci Resolve"* ]] || fail "finish: $out"
 }
 
+# --- second review --------------------------------------------------------
+
+test_numbers_with_leading_zeros_and_spaces() {
+    setup_sandbox; load_zapz
+    printf '07 02\n   \n' > "$SANDBOX/answers"
+    ZAPZ_TTY="$SANDBOX/answers"; open_prompt_input
+    assert_eq "$(ask_numbers "pick" 9 2>/dev/null)" "7 2" "leading zeros are decimal"
+    assert_eq "$(ask_numbers "pick" 9 "3" 2>/dev/null)" "3" "spaces mean the default"
+}
+
+test_unattended_install_gets_recommended_config() {
+    setup_sandbox
+    stub uname 'echo Darwin'
+    ZAPZ_NONINTERACTIVE=1 ZAPZ_SOURCE="$PROJECT_ROOT" "$BASH" "$PROJECT_ROOT/install.sh" > /dev/null 2>&1
+    local config="$HOME/.local/share/zapz/config/default.yml"
+    assert_file "$config"
+    assert_eq "$(yq e '.homebrew.casks | contains(["google-chrome", "ghostty", "font-jetbrains-mono-nerd-font"])' "$config")" "true"
+    assert_eq "$(yq e '.apps.app_store | length' "$config")" "0" "no App Store apps nobody chose"
+    assert_eq "$(yq e '.security.touch_id_sudo' "$config")" "true"
+}
+
+test_dry_run_without_config_previews_recommended_setup() {
+    setup_mac_sandbox
+    copy_zapz
+    local out
+    out=$("$BASH" "$ZAPZ_COPY/setup.sh" --dry-run 2>&1)
+    [[ "$out" == *"Ghostty"* && "$out" == *"Chrome"* ]] || fail "$out"
+    [[ "$out" != *"Final Cut Pro"* ]] || fail "previewed the example's App Store app: $out"
+    assert_no_file "$ZAPZ_COPY/config/default.yml"
+}
+
+test_checklist_prints_links_and_keeps_pipes() {
+    setup_sandbox; load_zapz
+    add_checklist "Download Thing" "https://example.com/thing" "" "free"
+    add_checklist "Run installer" "" "curl -fsSL https://example.com/i.sh | sh"
+    local out
+    out=$(ui_checklist)
+    [[ "$out" == *"open: https://example.com/thing"* ]] || fail "$out"
+    [[ "$out" == *"run: curl -fsSL https://example.com/i.sh | sh"* ]] || fail "$out"
+    [[ "$out" == *"free"* ]] || fail "note missing: $out"
+}
+
+test_existing_oh_my_zsh_is_not_loaded_twice() {
+    setup_sandbox; load_zapz
+    mkdir -p "$HOME/.oh-my-zsh"
+    printf 'export ZSH="$HOME/.oh-my-zsh"\nZSH_THEME="robbyrussell"\nsource $ZSH/oh-my-zsh.sh\n' > "$HOME/.zshrc"
+    use_config <<< 'shell: {setup: recommended}'
+    setup_shell > /dev/null
+    assert_count "$HOME/.zshrc" "oh-my-zsh.sh" 1
+    assert_contains "$HOME/.zshrc" "starship init zsh"
+}
+
+test_reruns_report_terminal_and_shell_as_already_set() {
+    setup_sandbox; load_zapz
+    fake_omz_repo
+    use_config <<< 'terminal: {app: ghostty}
+shell: {setup: recommended}'
+    setup_terminal_shell > /dev/null
+    local out
+    out=$(setup_terminal_shell 2>&1)
+    [[ "$out" == *"·"*"Ghostty"*"already set"* && "$out" == *"·"*"Shell"* ]] || fail "$out"
+    assert_contains "$HOME/.config/ghostty/config" 'font-family = ""'
+}
+
+test_app_store_apps_need_the_password_up_front() {
+    setup_mac_sandbox
+    stub mas '[[ "$1" == list ]] && exit 0; exit 0'
+    cat >> "$SANDBOX/config.yml" << 'YAML'
+apps: {app_store: [{name: "Final Cut Pro", id: 424389933}]}
+YAML
+    # Make every Homebrew package already installed, so only mas needs admin
+    brew_installed ripgrep
+    brew_installed iterm2
+    local out
+    out=$(ZAPZ_NONINTERACTIVE=1 zapz --yes 2>&1) || true
+    assert_contains "$STUB_LOG" "sudo -n true"
+}
+
+test_weekly_updates_skip_app_store_without_sudo() {
+    setup_sandbox
+    stub mas
+    stub sudo 'exit 1'
+    "$BASH" "$PROJECT_ROOT/lib/maintenance.sh" > /dev/null 2>&1 || true
+    assert_not_contains "$STUB_LOG" "mas upgrade"
+}
+
+section "second review"
+run_test "numbers with leading zeros and blank answers" test_numbers_with_leading_zeros_and_spaces
+run_test "an unattended install gets the recommended config" test_unattended_install_gets_recommended_config
+run_test "--dry-run without a config previews the recommended setup" test_dry_run_without_config_previews_recommended_setup
+run_test "the checklist prints links and keeps commands with pipes" test_checklist_prints_links_and_keeps_pipes
+run_test "an existing Oh My Zsh isn't loaded twice" test_existing_oh_my_zsh_is_not_loaded_twice
+run_test "re-runs report terminal and shell as already set" test_reruns_report_terminal_and_shell_as_already_set
+run_test "App Store apps need the password up front" test_app_store_apps_need_the_password_up_front
+run_test "weekly updates skip the App Store without sudo" test_weekly_updates_skip_app_store_without_sudo
+
 section "new setup steps"
 run_test "security: turns on Touch ID for sudo and the firewall, flags FileVault" test_security_turns_things_on
 run_test "security: leaves what's already on alone" test_security_leaves_what_is_already_on

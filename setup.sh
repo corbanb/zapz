@@ -254,7 +254,7 @@ start_admin_session() {
         log_info "Run zapz in a terminal, or allow passwordless sudo for this account."
         exit 1
     fi
-    printf "\n  zapz needs your Mac password to install Homebrew and apps.\n"
+    printf "\n  zapz needs your Mac password for installs and a few system settings.\n"
     printf "  It asks once now, so the rest can run without you.\n"
     if ! sudo -v; then
         log_error "Couldn't get administrator access. zapz needs an admin account."
@@ -274,7 +274,7 @@ start_admin_session() {
 }
 
 cleanup() {
-    rm -f "${ZAPZ_GIST_CONFIG:-}"
+    rm -f "${ZAPZ_GIST_CONFIG:-}" "${ZAPZ_DRY_RUN_CONFIG:-}"
     [[ -z "${ZAPZ_SUDO_KEEPALIVE_PID:-}" ]] || kill "$ZAPZ_SUDO_KEEPALIVE_PID" 2>/dev/null || true
 }
 
@@ -290,9 +290,12 @@ main() {
     trap cleanup EXIT
 
     ensure_yq
-    # A dry run reads the example config rather than creating one
+    # A dry run before any config exists previews the recommended setup
+    # without saving it
     if [[ "$DRY_RUN" == true && -z "$CUSTOM_CONFIG" && -z "$GIST_URL" && ! -f "$DEFAULT_CONFIG" ]]; then
-        CUSTOM_CONFIG="${DEFAULT_CONFIG}.example"
+        ZAPZ_DRY_RUN_CONFIG=$(mktemp)
+        write_default_config "$ZAPZ_DRY_RUN_CONFIG"
+        CUSTOM_CONFIG="$ZAPZ_DRY_RUN_CONFIG"
     fi
     load_configuration
     validate_configuration

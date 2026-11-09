@@ -21,19 +21,25 @@ ask_numbers() {
     while true; do
         answer=$(ask "$prompt" "$default")
         answer="${answer//,/ }"
+        # Only spaces: same as pressing Enter
+        [[ -n "${answer// /}" ]] || answer="$default"
         case "$answer" in
             0|none|None|NONE) echo ""; return 0 ;;
         esac
         valid=true
+        local normalized=""
         for n in $answer; do
-            if [[ ! "$n" =~ ^[0-9]+$ ]] || ((n < 1 || n > max)); then
+            # 10#: "08" is decimal 8, not an invalid octal number
+            if [[ ! "$n" =~ ^[0-9]+$ ]] || ((10#$n < 1 || 10#$n > max)); then
                 valid=false
+            else
+                normalized="$normalized $((10#$n))"
             fi
         done
         if [[ "$valid" == true ]]; then
             # de-duplicate, keep order
             # shellcheck disable=SC2086  # split the answer into numbers
-            printf '%s\n' $answer | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/ $//'
+            printf '%s\n' $normalized | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/ $//'
             echo
             return 0
         fi
@@ -230,4 +236,19 @@ run_config_wizard() {
     backup_file "$dest"
     mv "$tmp" "$dest"
     printf "\n  ${GREEN}✓${NC} Saved your setup to %s\n" "$(tilde_path "$dest")"
+}
+
+# The config you'd get by pressing Enter on every wizard screen: the
+# essentials and every recommendation. Used when there's no terminal to ask
+# (e.g. an unattended install) and by --dry-run before any config exists.
+# Usage: write_default_config <config file to write>
+write_default_config() {
+    local dest="$1" answers
+    answers=$(mktemp)
+    printf '\n%.0s' 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 > "$answers"
+    (
+        exec 9< "$answers"
+        ZAPZ_PROMPT_FD=9 run_config_wizard "$dest"
+    ) > /dev/null 2>&1
+    rm -f "$answers"
 }

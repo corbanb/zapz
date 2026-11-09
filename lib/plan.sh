@@ -178,15 +178,31 @@ show_plan() {
         *) terminal="terminal left as it is" ;;
     esac
     case "$(config_get '.shell.setup' none)" in
-        recommended) shell="Oh My Zsh, suggestions, highlighting, Starship prompt" ;;
+        recommended)
+            if [[ "${SHELL:-}" == */bash ]]; then
+                shell="Starship prompt, fzf and zoxide for bash"
+            else
+                shell="Oh My Zsh, suggestions, highlighting, Starship prompt"
+            fi
+            ;;
         light) shell="Starship prompt" ;;
         *) shell="shell left as it is" ;;
     esac
     _plan_row "Terminal" "$terminal · $shell"
 
-    local app_store
-    app_store=$(yq e '(.apps.app_store // [])[].name' "$CONFIG_FILE" | _join)
-    [[ -z "$app_store" ]] || _plan_row "App Store" "$app_store (needs App Store sign-in)"
+    # App Store apps that aren't installed yet need a sign-in, and mas needs
+    # the password to install
+    local app_store="" mas_installed="" name id
+    command_exists mas && mas_installed=$(mas list 2>/dev/null | awk '{print $1}' || true)
+    while IFS=$'\t' read -r name id; do
+        [[ -n "$id" ]] || continue
+        grep -qx "$id" <<< "$mas_installed" && continue
+        app_store="${app_store:+$app_store, }$name"
+    done < <(yq e '(.apps.app_store // [])[] | [.name, (.id | tostring)] | @tsv' "$CONFIG_FILE")
+    if [[ -n "$app_store" ]]; then
+        _plan_row "App Store" "$app_store (needs App Store sign-in)"
+        PLAN_NEEDS_ADMIN=true
+    fi
 
     if [[ "${SKIP_MACOS:-false}" == true ]]; then
         text="skipped (--skip-macos)"

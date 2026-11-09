@@ -107,12 +107,13 @@ add_next_step() {
 # to run. Shown as a numbered checklist at the end.
 # Usage: add_checklist <title> [url] [command] [note]
 ZAPZ_CHECKLIST=()
+ZAPZ_CHECKLIST_SEP=$'\x1f'   # can't appear in a title, URL or command
 add_checklist() {
     local entry
     for entry in ${ZAPZ_CHECKLIST[@]+"${ZAPZ_CHECKLIST[@]}"}; do
-        [[ "${entry%%|*}" != "$1" ]] || return 0
+        [[ "${entry%%"$ZAPZ_CHECKLIST_SEP"*}" != "$1" ]] || return 0
     done
-    ZAPZ_CHECKLIST+=("$1|${2:-}|${3:-}|${4:-}")
+    ZAPZ_CHECKLIST+=("$1$ZAPZ_CHECKLIST_SEP${2:-}$ZAPZ_CHECKLIST_SEP${3:-}$ZAPZ_CHECKLIST_SEP${4:-}")
 }
 
 # The checklist, then an offer to open its links
@@ -121,18 +122,21 @@ ui_checklist() {
     local entry title url cmd note i=0 links=0
     printf "\n  ${BOLD}Things only you can do${NC}\n"
     for entry in "${ZAPZ_CHECKLIST[@]}"; do
-        IFS='|' read -r title url cmd note <<< "$entry"
+        IFS="$ZAPZ_CHECKLIST_SEP" read -r title url cmd note <<< "$entry"
         i=$((i + 1))
         printf "  %2d  %s\n" "$i" "$title"
         [[ -z "$note" ]] || printf "      ${DIM}%s${NC}\n" "$note"
         [[ -z "$cmd" ]] || printf "      ${DIM}run:${NC} %s\n" "$cmd"
+        [[ -z "$url" ]] || printf "      ${DIM}open:${NC} %s\n" "$url"
         [[ -z "$url" ]] || links=$((links + 1))
     done
-    if ((links > 0)) && [[ -n "${ZAPZ_PROMPT_FD:-}" ]] && command -v open >/dev/null 2>&1; then
+    # --yes means unattended: don't stop to ask
+    if ((links > 0)) && [[ -n "${ZAPZ_PROMPT_FD:-}" && "${ASSUME_YES:-false}" != true ]] \
+            && command -v open >/dev/null 2>&1; then
         printf "\n"
         if confirm "  Open the $links link(s) now?" Y; then
             for entry in "${ZAPZ_CHECKLIST[@]}"; do
-                IFS='|' read -r title url cmd note <<< "$entry"
+                IFS="$ZAPZ_CHECKLIST_SEP" read -r title url cmd note <<< "$entry"
                 [[ -z "$url" ]] || open "$url" >/dev/null 2>&1 || true
             done
         fi

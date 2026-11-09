@@ -3,6 +3,10 @@
 # Reading the persona catalog (catalog/*.yml) and collecting what the user
 # picks into one config. See catalog/README.md for the file format.
 
+# Separates fields inside one selection entry: a character that can't appear
+# in a title, URL or command (a "|" can, as in "curl … | sh")
+ZAPZ_SEP=$'\x1f'
+
 catalog_dir() {
     printf '%s\n' "${ZAPZ_CATALOG_DIR:-$ZAPZ_ROOT/catalog}"
 }
@@ -61,13 +65,13 @@ catalog_select() {
                 SEL_MISE+=("$tool")
             done
             ;;
-        mas) SEL_MAS+=("$label|$id") ;;
-        guided) SEL_CHECKLIST+=("Download $label|$url|-|$note") ;;
-        command) SEL_CHECKLIST+=("$label|-|$run|$note") ;;
+        mas) SEL_MAS+=("$label${ZAPZ_SEP}$id") ;;
+        guided) SEL_CHECKLIST+=("Download $label${ZAPZ_SEP}$url${ZAPZ_SEP}-${ZAPZ_SEP}$note") ;;
+        command) SEL_CHECKLIST+=("$label${ZAPZ_SEP}-${ZAPZ_SEP}$run${ZAPZ_SEP}$note") ;;
         none) ;;
     esac
     if [[ "$follow" != "-" ]]; then
-        SEL_CHECKLIST+=("$follow|-|-|-")
+        SEL_CHECKLIST+=("$follow${ZAPZ_SEP}-${ZAPZ_SEP}-${ZAPZ_SEP}-")
     fi
 }
 
@@ -113,12 +117,12 @@ catalog_write_selection() {
         yq -i '.languages.tools = ((.languages.tools // []) + (strenv(ZAPZ_W_LIST) | split("\n") | map(select(. != "")))) | .languages.tools |= unique' "$config"
 
     for entry in ${SEL_MAS[@]+"${SEL_MAS[@]}"}; do
-        ZAPZ_W_NAME="${entry%|*}" ZAPZ_W_ID="${entry##*|}" \
+        ZAPZ_W_NAME="${entry%"$ZAPZ_SEP"*}" ZAPZ_W_ID="${entry##*"$ZAPZ_SEP"}" \
             yq -i '.apps.app_store += [{"name": strenv(ZAPZ_W_NAME), "id": (strenv(ZAPZ_W_ID) | tonumber)}] | .apps.app_store |= unique_by(.id)' "$config"
     done
 
     for entry in ${SEL_CHECKLIST[@]+"${SEL_CHECKLIST[@]}"}; do
-        IFS='|' read -r title url cmd note <<< "$entry"
+        IFS="$ZAPZ_SEP" read -r title url cmd note <<< "$entry"
         ZAPZ_W_TITLE="$title" ZAPZ_W_URL="$url" ZAPZ_W_CMD="$cmd" ZAPZ_W_NOTE="$note" yq -i '
             .checklist += [{"title": strenv(ZAPZ_W_TITLE)}
                 + (strenv(ZAPZ_W_URL) | select(. != "-") | {"url": .})

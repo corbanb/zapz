@@ -57,7 +57,7 @@ setup_security() {
         else
             ui_item skipped "FileVault" "off; added to your checklist"
             add_checklist "Turn on FileVault (and save the recovery key somewhere safe)" \
-                "x-apple.systempreferences:com.apple.preference.security?FileVault"
+                "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?FileVault"
         fi
     fi
 }

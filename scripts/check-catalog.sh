@@ -22,17 +22,29 @@ source_url() {
         echo "$RAW/homebrew-cask/main/Casks/font/font-${letter:0:1}/$name.rb"
     elif [[ "$kind" == cask ]]; then
         echo "$RAW/homebrew-cask/main/Casks/${name:0:1}/$name.rb"
+    elif [[ "$name" == lib* ]]; then
+        # Homebrew keeps lib* formulas in their own folder
+        echo "$RAW/homebrew-core/main/Formula/lib/$name.rb"
     else
         echo "$RAW/homebrew-core/main/Formula/${name:0:1}/$name.rb"
     fi
 }
 
 # Every Homebrew item in the catalog, as "kind name" (tap-qualified formulas
-# like user/tap/name live in other repositories and are skipped)
-yq ea '[.core // [], ((.picks // [])[].items), ((.core // [], ((.picks // [])[].items))[] | .with // [])]
+# like user/tap/name live in other repositories and are skipped), plus what
+# the wizard adds for the terminal and shell questions
+if ! yq ea '[.core // [], ((.picks // [])[].items), ((.core // [], ((.picks // [])[].items))[] | .with // [])]
         | flatten | .[] | select(.kind == "formula" or .kind == "cask") | .kind + " " + .name' \
     "$PROJECT_ROOT"/catalog/essentials.yml "$PROJECT_ROOT"/catalog/personas/*.yml \
-    "$PROJECT_ROOT"/catalog/packs/*.yml | grep -v '/' | sort -u > "$work/items"
+    "$PROJECT_ROOT"/catalog/packs/*.yml > "$work/catalog"; then
+    echo "::error::Couldn't read the catalog (invalid YAML?)"
+    exit 1
+fi
+{
+    cat "$work/catalog"
+    printf '%s\n' "cask ghostty" "cask iterm2" "cask warp" \
+        "formula starship" "formula zsh-autosuggestions" "formula zsh-syntax-highlighting"
+} | grep -v '/' | sort -u > "$work/items"
 
 checked=0
 while read -r kind name; do
@@ -45,12 +57,21 @@ while read -r kind name; do
         continue
     fi
     if line=$(grep -m1 -E '^[[:space:]]*disable!' "$file"); then
-        echo "::error::$kind '$name' is disabled by Homebrew: ${line#"${line%%[![:space:]]*}"}"
-        missing=1
+        when=$(sed -n 's/.*date: *"\([0-9-]*\)".*/\1/p' <<< "$line")
+        if [[ -n "$when" && "$when" > "$(date +%F)" ]]; then
+            echo "::warning::$kind '$name' will be disabled by Homebrew on $when: ${line#"${line%%[![:space:]]*}"}"
+        else
+            echo "::error::$kind '$name' is disabled by Homebrew: ${line#"${line%%[![:space:]]*}"}"
+            missing=1
+        fi
     elif line=$(grep -m1 -E '^[[:space:]]*deprecate!' "$file"); then
         echo "::warning::$kind '$name' is deprecated by Homebrew: ${line#"${line%%[![:space:]]*}"}"
     fi
 done < "$work/items"
 
 echo "Checked $checked Homebrew names in catalog/"
+if ((checked == 0)); then
+    echo "::error::No Homebrew names found to check"
+    exit 1
+fi
 exit "$missing"

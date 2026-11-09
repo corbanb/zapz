@@ -123,8 +123,9 @@ elif can_prompt; then
     run_config_wizard "$config"
     asked=true
 else
-    cp "$ZAPZ_HOME/config/default.yml.example" "$config"
-    log_success "Created your config from the example: $(tilde_path "$config")"
+    # No one to ask: the essentials and every recommended choice
+    write_default_config "$config"
+    log_success "Created a recommended config: $(tilde_path "$config")"
 fi
 
 # Put the `zapz` command on PATH

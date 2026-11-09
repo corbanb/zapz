@@ -33,7 +33,8 @@ picks:
       - kind: cask
         name: adobe-creative-cloud
         label: Adobe Creative Cloud
-        then: Sign in to Creative Cloud
+        then: Sign in to Creative Cloud and install your Adobe apps
+        note: Photoshop, Illustrator and more
       - kind: mas
         id: 1289583905
         label: Pixelmator Pro

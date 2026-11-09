@@ -37,9 +37,9 @@ picks:
         recommended: true
       - kind: cask
         name: adobe-creative-cloud
-        label: Premiere Pro
-        note: through Adobe Creative Cloud
-        then: Sign in to Creative Cloud and install Premiere Pro
+        label: Adobe Creative Cloud
+        note: for Premiere Pro
+        then: Sign in to Creative Cloud and install your Adobe apps
       - kind: cask
         name: elgato-stream-deck
         label: Stream Deck

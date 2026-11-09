@@ -26,9 +26,9 @@ picks:
         note: paid; from the App Store
       - kind: cask
         name: adobe-creative-cloud
-        label: Premiere Pro
-        note: through Adobe Creative Cloud
-        then: Sign in to Creative Cloud and install Premiere Pro
+        label: Adobe Creative Cloud
+        note: for Premiere Pro
+        then: Sign in to Creative Cloud and install your Adobe apps
       - kind: guided
         label: Edits by Instagram
         url: https://edits.instagram.com/
