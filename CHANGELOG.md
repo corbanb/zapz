@@ -18,6 +18,14 @@ The first version that installs and runs end to end on a fresh Mac.
   are unchanged; weekly schedules accept several `days`.
 - `--skip-cron` is now `--skip-schedule` (the old name still works).
 - `--update` updates zapz with `git pull` instead of only checking.
+- The installer installs the latest release instead of the main branch; set
+  `ZAPZ_REF=main` for the latest code.
+- zapz downloads its own pinned, checksum-verified copy of yq instead of
+  installing it with Homebrew, so your config can be read and previewed
+  before anything is installed.
+- Steps run in a new order so all questions come first: Command Line Tools,
+  Git, SSH key, Homebrew, Node.js, macOS settings, scheduled updates, GitHub.
+- The Node.js step is skipped when `node.versions` is empty.
 - SSH keys are created with a passphrase prompt (stored in the Keychain)
   instead of an empty passphrase.
 - Git aliases are only added if you haven't defined them yourself.
@@ -30,10 +38,25 @@ The first version that installs and runs end to end on a fresh Mac.
   `DevToolsSecurity`.
 
 ### Added
+- A setup wizard: the installer asks for your name, email and a preset
+  (Essentials, Web development, Minimal) and writes your config, then offers
+  to start setup. Re-run it with `zapz --configure`. Presets are in
+  `config/presets/`.
+- A preview of everything zapz will install and change, and what you already
+  have, before anything happens, with a "Continue?" prompt. `--dry-run` shows
+  the preview only; `--yes` skips the question (required without a terminal).
+- Questions come first: your password (asked once and kept fresh), git
+  identity and SSH passphrase, so the long part runs unattended. A
+  notification says when setup is done.
+- Clearer output: numbered steps, one line per item with "already set" vs
+  changed, installers run quietly with a spinner, and a summary of changes,
+  problems and next steps. Full output goes to `~/Library/Logs/zapz/`.
+  zapz exits with status 1 if anything failed.
+- Backups: shell rc files, `~/.ssh/config` and your config are copied to
+  `~/.local/state/zapz/backups/` before zapz edits them.
+- GitHub CLI sign-in at the end of setup, which can upload your new SSH key.
 - The installer starts the Xcode Command Line Tools install itself on a
   fresh Mac and waits for it, so the one-line install works on a new machine.
-- When run in a terminal with no git identity set, zapz asks for your name
-  and email.
 - Taps listed in `homebrew.taps` are trusted with `brew trust` (required
   for third-party taps since Homebrew 6).
 - `git.config` for arbitrary `git config --global` options.

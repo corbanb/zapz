@@ -13,7 +13,7 @@ the Xcode dialog, Homebrew, nvm, the Keychain and launchd.
 - [ ] Run `zapz` a second time and confirm nothing is duplicated or reinstalled
 - [ ] Confirm the LaunchAgent fires (`launchctl kickstart gui/$(id -u)/com.github.corbanb.zapz.update`)
       and writes `~/Library/Logs/zapz/update.log`
-- [ ] Apple Silicon and Intel
+- [ ] Try the wizard, `--dry-run`, declining at "Continue?", and `--configure`
 
 ### End-to-end test in CI
 Add a macOS job that installs from the PR (`ZAPZ_SOURCE=$GITHUB_WORKSPACE`)
@@ -27,11 +27,24 @@ runner already has Homebrew, so this is realistic and fairly fast.
 The docs' `ZAPZ_REF=v0.2.0` examples and the update notice depend on that
 release existing.
 
+### Web config builder
+A page on the docs site for building a config visually: start from a preset
+(the files in `config/presets/`), pick apps from tiles, toggle macOS
+settings, and see the YAML update live. It ends with a copy-paste install
+command for exactly that setup (for example a Gist link passed to
+`zapz --gist`). Good for teams onboarding new hires.
+
 ## Later
 
-### `--dry-run`
-Print what each module would change without changing it. Most modules
-already check state before acting, so this is mostly plumbing a flag through.
+### `zapz capture`: copy setup from an old Mac
+Write a config from an existing Mac (installed Homebrew packages and apps,
+git settings, Node versions, the macOS settings zapz manages), optionally to
+a private Gist, so a new Mac can be set up to match with one command. Could
+also read and write a Homebrew `Brewfile`.
+
+### Friendly app names in the preview
+The preview shows Homebrew tokens (`visual-studio-code`); showing names
+("Visual Studio Code") would read better.
 
 ### Detect apps installed outside Homebrew
 Installing a cask whose app is already in `/Applications` currently fails and

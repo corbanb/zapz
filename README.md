@@ -18,46 +18,50 @@ Set up a Mac for development with one command, from one YAML file.
 ## 🎯 Overview
 
 `zapz` turns a fresh Mac into a working development machine: Homebrew and your
-packages, git, an SSH key for GitHub, Node.js, sensible macOS settings, and
-scheduled updates. Everything it does comes from a YAML config you can keep in
-a Gist and share with your team.
+apps, git, an SSH key for GitHub, Node.js, sensible macOS settings, and
+scheduled updates.
 
-It's safe to run again. Each step checks what's already there, packages that
-are already installed are skipped, and shell config changes are written once
-inside marked blocks rather than appended every run.
+It's built to be calm and trustworthy:
+
+- **No YAML to start.** A short wizard asks your name, email and what you want
+  (Essentials, Web development or Minimal) and writes the config for you.
+- **See it before it happens.** zapz shows exactly what it will install and
+  change, and what you already have, then asks before touching anything. Try
+  `zapz --dry-run` any time.
+- **Questions first, then hands-off.** Your password, git identity and SSH
+  passphrase are asked up front; the long part runs without you, and you get
+  a notification when it's done.
+- **Safe to run again.** Anything already installed or set is left alone, and
+  shell and SSH files are backed up before zapz edits them.
+- **Clear results.** One line per item, a summary of what changed and what
+  needs attention, and a full log for when something goes wrong.
 
 ## ✨ What it sets up
 
-In order:
-
-1. **Xcode Command Line Tools**
-2. **Homebrew**, then your taps, formulas and casks. A package that fails to
-   install is reported at the end instead of stopping the run.
-3. **Git**: name, email, editor, default branch and any other `git config`
-   options. Blank values leave your existing settings alone.
-4. **SSH**: an ed25519 key (you choose a passphrase; macOS keeps it in your
-   Keychain), a `github.com` entry in `~/.ssh/config`, and GitHub CLI login.
-5. **Node.js** via [nvm](https://github.com/nvm-sh/nvm): the versions you list,
-   a default, and global npm packages.
-6. **macOS preferences**: Dock, keyboard repeat and Finder settings.
+1. **Command Line Tools** (Apple's developer tools, which include git)
+2. **Git**: name, email, editor, default branch and other `git config` options
+3. **SSH key**: an ed25519 key protected by a passphrase that macOS keeps in
+   your Keychain, plus a `github.com` entry in `~/.ssh/config`
+4. **Homebrew** and your packages and apps. A package that fails is listed in
+   the summary instead of stopping setup.
+5. **Node.js** via [nvm](https://github.com/nvm-sh/nvm): versions, a default and
+   global npm packages
+6. **macOS settings**: Dock, key repeat and Finder
 7. **Scheduled updates**: a launchd job that runs `brew upgrade`,
-   `npm update -g` and `mas upgrade` daily, weekly or monthly.
-
-The example config also installs Bun, Deno, VS Code, iTerm2, Docker and
-1Password. Edit the lists to suit you.
+   `npm update -g` and `mas upgrade` on your schedule
+8. **GitHub**: sign in with the GitHub CLI, which can upload your new SSH key
+   for you
 
 ## 🚀 Quick Start
 
 ### Requirements
 
-- macOS 14 (Sonoma) or later. macOS 15 or later is recommended, since that's
-  what Homebrew fully supports. Tested on macOS 15, 26 and 27.
+- macOS 14 (Sonoma) or later; macOS 15 or later is recommended (Homebrew's
+  fully supported versions). Tested on macOS 15, 26 and 27.
+- An administrator account (Homebrew and apps need your password once).
 
-On a new Mac, the installer first opens Apple's Command Line Tools dialog
-(which provides git); click **Install** and it continues once that finishes.
-
-zapz installs everything else it needs, including Homebrew and
-[yq](https://github.com/mikefarah/yq).
+That's it. On a new Mac the installer first opens Apple's Command Line Tools
+dialog; click **Install** and it carries on when that finishes.
 
 ### Install
 
@@ -65,27 +69,60 @@ zapz installs everything else it needs, including Homebrew and
 curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | bash
 ```
 
-This clones zapz to `~/.local/share/zapz`, adds a `zapz` command to
-`~/.local/bin`, creates your config at
-`~/.local/share/zapz/config/default.yml`, and updates `~/.zshrc` (or
-`~/.bash_profile` for bash) so the command is on your `PATH`.
+The installer:
 
-To install a specific release or branch, set `ZAPZ_REF`:
+1. installs the latest zapz release to `~/.local/share/zapz` and adds the
+   `zapz` command to `~/.local/bin` (it edits `~/.zshrc`, or `~/.bash_profile`
+   for bash, inside a clearly marked block);
+2. asks a few questions and writes your config;
+3. offers to preview and run setup right away.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | ZAPZ_REF=v0.2.0 bash
-```
-
-### Run
-
-Review the config, open a new terminal, then:
+Prefer to read it first? Download it, look, then run it:
 
 ```bash
-zapz
+curl -fsSLO https://raw.githubusercontent.com/corbanb/zapz/main/install.sh
+less install.sh
+bash install.sh
 ```
 
-Some steps are interactive: the Xcode installer dialog, your SSH key
-passphrase, and GitHub CLI login in the browser.
+To install a specific release or branch, set `ZAPZ_REF` (for example
+`ZAPZ_REF=v0.2.0` or `ZAPZ_REF=main`).
+
+### What a run looks like
+
+```text
+  ⚡ zapz 0.2.0 · macOS 27.2 · Apple Silicon
+
+  Here's what zapz will do:
+
+  Tools      Command Line Tools: already installed
+  Homebrew   install Homebrew
+  Packages   git, gh, jq, ripgrep, fd, tree, wget, oven-sh/bun/bun, deno
+  Apps       visual-studio-code, iterm2, docker-desktop, 1password
+  Git        Ada Lovelace · ada@example.com
+  SSH        new key for GitHub (you'll choose a passphrase)
+  Node.js    lts/lithium, lts/krypton (default lts/lithium) · pnpm, typescript
+  macOS      Dock: auto-hide on, Key repeat rate 2, Finder: hidden files on, …
+  Updates    weekly, Monday 09:00
+  GitHub     sign in with the GitHub CLI (optional, at the end)
+
+  Continue? [Y/n]
+
+[4/8] Homebrew
+  ✓ ripgrep                      4s
+  · jq                           already installed
+  ✓ visual-studio-code           21s
+
+────────────────────────────────────────────────
+✓ Done in 14m 05s
+  31 changed · 6 already set
+
+  Next
+  ➜ Open a new terminal (or run: exec $SHELL -l) to start using everything
+
+  Full log: ~/Library/Logs/zapz/setup-20261109-091500.log
+  Backups of edited files: ~/.local/state/zapz/backups/20261109-091500
+```
 
 ## 📖 Usage
 
@@ -93,29 +130,38 @@ passphrase, and GitHub CLI login in the browser.
 Usage: zapz [OPTIONS]
 
 Options:
-    -h, --help             Show this help message
-    -v, --verbose          Enable verbose output
-    --version              Show version information
-    --update               Update zapz to the latest version
+    -n, --dry-run          Show what would happen, change nothing
+    -y, --yes              Don't ask for confirmation
+    --configure            Answer a few questions to (re)create your config
     -c, --config FILE      Use custom config file
     -g, --gist URL         Use settings from a GitHub Gist raw URL
     --skip-macos           Skip macOS preferences setup
     --skip-schedule        Skip scheduled update setup (alias: --skip-cron)
+    --update               Update zapz to the latest version
+    -v, --verbose          Enable verbose output
+    --version              Show version information
+    -h, --help             Show this help message
 ```
 
 Examples:
 
 ```bash
-zapz --verbose                        # See every step
+zapz --dry-run                        # Preview only
+zapz --configure                      # Re-run the setup wizard
 zapz -c ~/dotfiles/zapz.yml           # Use a config kept elsewhere
 zapz --skip-macos --skip-schedule     # Packages and tools only
+zapz --yes                            # Unattended (e.g. scripts, CI)
 ```
+
+zapz exits with status 1 if any item failed, so scripts can tell.
 
 ## ⚙️ Configuration
 
-The installer copies [`config/default.yml.example`](config/default.yml.example)
-to `~/.local/share/zapz/config/default.yml`. Edit that file; updates never
-overwrite it. Anything you leave out or leave empty is skipped.
+The setup wizard writes `~/.local/share/zapz/config/default.yml` from one of
+the [presets](config/presets/) and your answers. Edit it any time, or re-run
+`zapz --configure`; updates never overwrite it, and the previous version is
+backed up. Anything you leave out or leave empty is skipped. Every option is
+documented in [`config/default.yml.example`](config/default.yml.example).
 
 ```yaml
 git:
@@ -187,18 +233,22 @@ to `~/Library/Logs/zapz/update.log`. To stop it, set `enabled: false` and run
 
 ## 🔍 Troubleshooting
 
-**`zapz: command not found`.** Open a new terminal, or run `source ~/.zshrc`.
+**`zapz: command not found`.** Open a new terminal, or run `exec $SHELL -l`.
 
-**"An incompatible yq is still first on your PATH".** Another program called
-`yq` (the Python one) is shadowing the one zapz needs. Remove it, or put
-Homebrew's `bin` directory earlier in your `PATH`.
+**Something failed.** The summary lists each problem, and the full output is
+in the log it names (`~/Library/Logs/zapz/`). Fix the cause and run `zapz`
+again; everything that already worked is skipped.
 
-**A Homebrew cask failed.** Usually the app was already installed by hand.
-zapz lists failed packages at the end and carries on; delete the app or remove
-it from your config.
+**A Homebrew app failed.** Usually it was already installed by hand. Delete
+the app from `/Applications` and re-run, or remove it from your config.
 
-**See what happened.** Run `zapz --verbose`. Scheduled update output is in
-`~/Library/Logs/zapz/update.log`.
+**Undo a change to a shell or SSH file.** zapz copies each file to
+`~/.local/state/zapz/backups/<date-time>/` before editing it. Its own changes
+are between `# >>> zapz … >>>` and `# <<< zapz … <<<` lines, so you can also
+just delete that block.
+
+**Running without a terminal (scripts, CI).** Pass `--yes`, and make sure the
+account can use `sudo` without a password if Homebrew or apps need installing.
 
 ## 🛠 Development
 
