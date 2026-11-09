@@ -343,7 +343,7 @@ Each scheduled run:
 - runs `mise upgrade` if mise is installed
 - runs `npm update -g` with nvm's default Node, if nvm is installed (older
   configs)
-- runs `mas upgrade` if [mas](https://github.com/mas-cli/mas) is installed
+- runs `mas upgrade` if [mas](https://github.com/mas-cli/mas) is installed and your account can use `sudo` without a password (mas needs administrator rights; otherwise macOS keeps App Store apps updated)
 - shows a macOS notification when it finishes or if something fails
 
 The agent is saved at

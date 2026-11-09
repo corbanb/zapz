@@ -43,6 +43,15 @@ Set up a Mac for the way you work, not just for web development.
 - The run ends with "Your Mac is ready" and the checklist first.
 - Essentials add git-lfs, fzf, bat, eza, zoxide, btop, tlrc, mas, The
   Unarchiver, AppCleaner and a Nerd Font; Raycast is optional.
+- Security settings are opt-in: configs from older versions (with no
+  `security` section) are never changed; the wizard turns all three on.
+- An unattended install (no terminal) gets the recommended config instead
+  of the example; `--dry-run` before any config previews it.
+- Follow-ups such as adding your SSH key to GitHub moved from "Next" into
+  the checklist, with links.
+- App Store installs need your administrator password (mas requires it),
+  so zapz asks for it up front when an App Store app is missing. Scheduled
+  updates run `mas upgrade` only when sudo works without a password.
 
 ## [0.2.0] - Unreleased
 

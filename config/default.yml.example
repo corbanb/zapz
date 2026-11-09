@@ -81,7 +81,8 @@ macos:
     folder: "~/Pictures/Screenshots"
   developer_mode: false      # Enable DevToolsSecurity (asks for your password)
 
-# Scheduled updates (Homebrew, mise languages, App Store via mas)
+# Scheduled updates (Homebrew and mise languages; App Store apps too if sudo
+# works without a password, since mas needs administrator rights)
 cron:
   update_schedule:
     enabled: true
