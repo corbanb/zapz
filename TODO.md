@@ -28,8 +28,8 @@ The docs' `ZAPZ_REF=v0.2.0` examples and the update notice depend on that
 release existing.
 
 ### Web config builder
-A page on the docs site for building a config visually: start from a preset
-(the files in `config/presets/`), pick apps from tiles, toggle macOS
+A page on the docs site for building a config visually: start from the
+personas and packs in `catalog/`, pick apps from tiles, toggle macOS
 settings, and see the YAML update live. It ends with a copy-paste install
 command for exactly that setup (for example a Gist link passed to
 `zapz --gist`). Good for teams onboarding new hires.
@@ -42,9 +42,6 @@ git settings, Node versions, the macOS settings zapz manages), optionally to
 a private Gist, so a new Mac can be set up to match with one command. Could
 also read and write a Homebrew `Brewfile`.
 
-### Friendly app names in the preview
-The preview shows Homebrew tokens (`visual-studio-code`); showing names
-("Visual Studio Code") would read better.
 
 ### Detect apps installed outside Homebrew
 Installing a cask whose app is already in `/Applications` currently fails and

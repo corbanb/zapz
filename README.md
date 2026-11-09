@@ -17,40 +17,74 @@ Set up a Mac for development with one command, from one YAML file.
 
 ## 🎯 Overview
 
-`zapz` turns a fresh Mac into a working development machine: Homebrew and your
-apps, git, an SSH key for GitHub, Node.js, sensible macOS settings, and
-scheduled updates.
+`zapz` gets a new Mac ready for the way you work. Tell it what you do
+(developer, AI builder, video editor, creator, designer and more) and it
+installs the apps and tools for that, sets up git, an SSH key, your terminal
+and shell, sensible macOS and security settings, and keeps everything up to
+date.
 
 It's built to be calm and trustworthy:
 
-- **No YAML to start.** A short wizard asks your name, email and what you want
-  (Essentials, Web development or Minimal) and writes the config for you.
+- **No YAML to start.** A short wizard asks who you are and what you'll use
+  the Mac for, offers a few choices with recommendations marked, and writes
+  the config for you.
 - **See it before it happens.** zapz shows exactly what it will install and
-  change, and what you already have, then asks before touching anything. Try
-  `zapz --dry-run` any time.
+  change, what you already have, and what will need you, then asks before
+  touching anything. Try `zapz --dry-run` any time.
 - **Questions first, then hands-off.** Your password, git identity and SSH
   passphrase are asked up front; the long part runs without you, and you get
   a notification when it's done.
+- **Honest about what it can't do.** App Store purchases, downloads behind a
+  sign-up and app sign-ins end up on a "Things only you can do" checklist,
+  with links to open.
 - **Safe to run again.** Anything already installed or set is left alone, and
   shell and SSH files are backed up before zapz edits them.
-- **Clear results.** One line per item, a summary of what changed and what
-  needs attention, and a full log for when something goes wrong.
 
-## ✨ What it sets up
+## ✨ Who it's for
+
+Pick any combination; everyone also gets the **essentials**: git and the
+GitHub CLI, modern command-line tools (ripgrep, fzf, bat, eza, zoxide…),
+1Password, a browser of your choice, and a Nerd Font.
+
+| Persona | Includes (★ = recommended choices) |
+|---|---|
+| Software development | VS Code, OrbStack ★, Node.js, Bun, pnpm and Python via mise, uv; Cursor ★, Bruno ★, Zed, JetBrains, TablePlus… |
+| AI building | Claude, Claude Code, ChatGPT, Cursor, JupyterLab; Conductor ★, T3 Code, Paperclip, Codex, Antigravity CLI, OpenCode… |
+| Mobile apps | Xcode (via Xcodes), Android Studio, CocoaPods, fastlane; Flutter, Expo |
+| Game development | Unity Hub, Godot; Unreal (Epic Games), Blockbench, Tiled, Aseprite, Blender |
+| Data science | Positron, JupyterLab, DuckDB, DBeaver, Python; Quarto ★, R, RStudio, Tableau |
+| Video editing | HandBrake, IINA, ffmpeg; choose DaVinci Resolve, Final Cut Pro, Premiere Pro or Edits |
+| Content & streaming | OBS, Descript, CapCut, Canva, Shottr, Kap; Edits ★, Premiere, Elgato, Loopback… |
+| Design | Figma, Affinity, ImageOptim, FontBase; Framer, Spline, Pixelmator Pro |
+| Team collaboration | Slack, Zoom, Notion, Notion Calendar, Obsidian; Discord |
+
+**Extras anyone can add:** meeting notes (Granola ★, Krisp, or open-source
+Meetily and Anarlog), voice dictation (Wispr Flow ★, Superwhisper, Aqua Voice,
+MacWhisper, or open-source VoiceInk, Handy, OpenWhispr, Buzz), local AI models
+(Ollama, LM Studio) and Raycast.
+
+The full lists live in [`catalog/`](catalog/), and a weekly check makes sure
+every app is still available in Homebrew.
+
+## 🧭 What setup does
 
 1. **Command Line Tools** (Apple's developer tools, which include git)
-2. **Git**: name, email, editor, default branch and other `git config` options
-3. **SSH key**: an ed25519 key protected by a passphrase that macOS keeps in
+2. **Security**: Touch ID for `sudo`, the firewall on, and a FileVault check
+3. **Git**: name, email, editor, default branch and other `git config` options
+4. **SSH key**: an ed25519 key protected by a passphrase that macOS keeps in
    your Keychain, plus a `github.com` entry in `~/.ssh/config`
-4. **Homebrew** and your packages and apps. A package that fails is listed in
-   the summary instead of stopping setup.
-5. **Node.js** via [nvm](https://github.com/nvm-sh/nvm): versions, a default and
-   global npm packages
-6. **macOS settings**: Dock, key repeat and Finder
-7. **Scheduled updates**: a launchd job that runs `brew upgrade`,
-   `npm update -g` and `mas upgrade` on your schedule
-8. **GitHub**: sign in with the GitHub CLI, which can upload your new SSH key
-   for you
+5. **Homebrew** and your apps and tools. Anything that fails is listed in the
+   summary instead of stopping setup.
+6. **Languages** with [mise](https://mise.jdx.dev): Node.js, Python, Bun, Go…
+7. **Terminal & shell**: Ghostty ★ (or iTerm2, Warp, Terminal) with the right
+   font, and Oh My Zsh with suggestions, highlighting and the Starship prompt
+8. **App Store** apps you picked (when you're signed in and own them)
+9. **macOS settings**: Dock, key repeat, Finder and a Screenshots folder
+10. **Scheduled updates**: a launchd job that runs `brew upgrade`,
+    `mise upgrade` and `mas upgrade` on your schedule
+11. **GitHub**: sign in with the GitHub CLI, which can upload your SSH key
+
+Steps that don't apply to your choices are skipped.
 
 ## 🚀 Quick Start
 
@@ -91,37 +125,45 @@ To install a specific release or branch, set `ZAPZ_REF` (for example
 ### What a run looks like
 
 ```text
-  ⚡ zapz 0.2.0 · macOS 27.2 · Apple Silicon
+  ⚡ zapz 0.3.0 · macOS 27.2 · Apple Silicon
 
   Here's what zapz will do:
 
+  For        Software development, Video editing, Voice dictation
   Tools      Command Line Tools: already installed
+  Security   turn on Touch ID for sudo, turn on the firewall, check FileVault
   Homebrew   install Homebrew
-  Packages   git, gh, jq, ripgrep, fd, tree, wget, oven-sh/bun/bun, deno
-  Apps       visual-studio-code, iterm2, docker-desktop, 1password
+  Apps       1Password, Chrome, VS Code, OrbStack, Cursor, HandBrake, Wispr Flow, Ghostty
   Git        Ada Lovelace · ada@example.com
   SSH        new key for GitHub (you'll choose a passphrase)
-  Node.js    lts/lithium, lts/krypton (default lts/lithium) · pnpm, typescript
-  macOS      Dock: auto-hide on, Key repeat rate 2, Finder: hidden files on, …
-  Updates    weekly, Monday 09:00
-  GitHub     sign in with the GitHub CLI (optional, at the end)
+  Languages  node@lts, bun@latest, pnpm@latest, python@3.13 (with mise)
+  Terminal   Ghostty · Oh My Zsh, suggestions, highlighting, Starship prompt
+  App Store  Final Cut Pro (needs App Store sign-in)
+
+  You'll need to:
+    · sign in to the App Store
+    · Download DaVinci Resolve
+    · Sign in to Wispr Flow
+
+  About 25 minutes. Only missing things are installed; files are backed up before edits.
 
   Continue? [Y/n]
 
-[4/8] Homebrew
-  ✓ ripgrep                      4s
-  · jq                           already installed
-  ✓ visual-studio-code           21s
+[5/11] Homebrew
+  ✓ Cursor                       18s
+  · git                          already installed
 
 ────────────────────────────────────────────────
-✓ Done in 14m 05s
-  31 changed · 6 already set
+✓ Your Mac is ready ⚡  24m 12s
+  58 changed · 6 already set
 
-  Next
-  ➜ Open a new terminal (or run: exec $SHELL -l) to start using everything
+  Things only you can do
+   1  Sign in to 1Password
+   2  Download DaVinci Resolve
+   3  Sign in to Wispr Flow
+   4  Turn on FileVault (and save the recovery key somewhere safe)
 
-  Full log: ~/Library/Logs/zapz/setup-20261109-091500.log
-  Backups of edited files: ~/.local/state/zapz/backups/20261109-091500
+  Open the 2 link(s) now? [Y/n]
 ```
 
 ## 📖 Usage
@@ -157,8 +199,8 @@ zapz exits with status 1 if any item failed, so scripts can tell.
 
 ## ⚙️ Configuration
 
-The setup wizard writes `~/.local/share/zapz/config/default.yml` from one of
-the [presets](config/presets/) and your answers. Edit it any time, or re-run
+The setup wizard writes `~/.local/share/zapz/config/default.yml` from the
+[catalog](catalog/) and your answers. Edit it any time, or re-run
 `zapz --configure`, which asks before replacing it and backs up the old one.
 Updates never overwrite it. Anything you leave out or leave empty is skipped.
 Every option is documented in
@@ -166,40 +208,35 @@ Every option is documented in
 
 ```yaml
 git:
-  user:
-    name: "Your Name"
-    email: "you@example.com"
+  user: { name: "Your Name", email: "you@example.com" }
   editor: "code --wait"
-  default_branch: "main"
-  config:                      # any other git config --global options
-    pull.rebase: "true"
-
-node:
-  versions: ["lts/lithium", "lts/krypton"]
-  default: "lts/lithium"
-  global_packages: ["pnpm", "typescript"]
 
 homebrew:
-  taps: []
-  formulas: ["gh", "jq", "ripgrep", "oven-sh/bun/bun"]
-  casks: ["visual-studio-code", "iterm2"]
+  formulas: ["gh", "jq", "ripgrep", "mise"]
+  casks: ["visual-studio-code", "ghostty", "figma"]
+
+languages:
+  tools: ["node@lts", "python@3.13"]   # installed with mise
+
+apps:
+  app_store:
+    - { name: "Final Cut Pro", id: 424389933 }
+
+terminal: { app: "ghostty" }           # ghostty, iterm2, warp or terminal
+shell: { setup: "recommended" }        # recommended, light or none
+
+security: { touch_id_sudo: true, firewall: true, filevault_check: true }
 
 macos:
-  dock: { autohide: true, magnification: false }
-  keyboard: { key_repeat: 2, initial_key_repeat: 15 }
-  finder: { show_hidden_files: true, show_path_bar: true }
-  developer_mode: false        # DevToolsSecurity; asks for your password
+  dock: { autohide: true }
+  screenshots: { folder: "~/Pictures/Screenshots" }
 
-cron:
-  update_schedule:
-    enabled: true
-    frequency: "weekly"        # daily, weekly or monthly
-    time: "09:00"
-    days: ["Monday"]
+checklist:                             # shown at the end, with links
+  - { title: "Download DaVinci Resolve", url: "https://www.blackmagicdesign.com/products/davinciresolve" }
 ```
 
-See the [configuration reference](https://corbanb.github.io/zapz/configuration)
-for every option.
+To add an app to a persona for everyone, edit its file in
+[`catalog/`](catalog/README.md).
 
 ### Sharing a config with a Gist
 
@@ -225,9 +262,9 @@ zapz --update
 To turn the notice off, add `export ZAPZ_DISABLE_UPDATE_CHECK=1` to your shell
 config.
 
-**Your packages.** With `cron.update_schedule.enabled`, zapz installs a launchd
-agent that updates Homebrew packages, global npm packages and App Store apps (if
-[`mas`](https://github.com/mas-cli/mas) is installed) on your schedule. Unlike
+**Your apps and tools.** With `cron.update_schedule.enabled`, zapz installs a
+launchd agent that updates Homebrew packages, mise languages and App Store apps
+(if [`mas`](https://github.com/mas-cli/mas) is installed) on your schedule. Unlike
 cron, launchd catches up on runs missed while the Mac was asleep. Output goes
 to `~/Library/Logs/zapz/update.log`. To stop it, set `enabled: false` and run
 `zapz` again.

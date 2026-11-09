@@ -1,6 +1,7 @@
 # First-run redesign: personas for 2027
 
-**Status:** draft for review, round 2. Nothing here is built yet.
+**Status:** built (zapz 0.3.0). This doc records the design and decisions;
+`catalog/` is the source of truth for what each persona installs.
 **Checked:** every Homebrew name below was confirmed in Homebrew's cask and
 core repositories on 2026-11-09. App Store IDs still need confirming on a Mac.
 

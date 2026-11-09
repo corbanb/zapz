@@ -84,6 +84,8 @@ make_release_repo() {
     mkdir -p "$work"
     tar -C "$PROJECT_ROOT" --exclude=./.git --exclude=./config/default.yml -cf - . | tar -C "$work" -xf -
     git -C "$work" init -q -b main
+    # Explicit versions, independent of the real lib/version.sh
+    sed -i.bak 's/^ZAPZ_VERSION=.*/ZAPZ_VERSION="0.1.0"/' "$work/lib/version.sh"
     git -C "$work" add -A
     git -C "$work" -c commit.gpgsign=false commit -q -m one
     git -C "$work" tag v0.1.0
