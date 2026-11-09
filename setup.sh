@@ -75,7 +75,8 @@ Options:
     -g, --gist URL         Use settings from a GitHub Gist raw URL
     --skip-macos           Skip macOS preferences setup
     --skip-schedule        Skip scheduled update setup (alias: --skip-cron)
-    --update               Update zapz to the latest version
+    --update [TARGET]      Update zapz to the latest release, or to TARGET:
+                           a version (v0.3.0), a branch to test, or "latest"
     -v, --verbose          Enable verbose output
     --version              Show version information
     -h, --help             Show this help message
@@ -112,7 +113,17 @@ parse_arguments() {
                 exit 0
                 ;;
             --update)
-                update_zapz
+                # Optional target: a version, a branch, or "latest"
+                if [[ $# -gt 1 && "$2" != -* ]]; then
+                    update_zapz "$2"
+                else
+                    update_zapz
+                fi
+                exit 0
+                ;;
+            --after-update)
+                require_value "$@"
+                after_update "$2"
                 exit 0
                 ;;
             -n|--dry-run)
@@ -158,48 +169,137 @@ print_version() {
     echo "https://github.com/${ZAPZ_REPO_SLUG}"
 }
 
-# Pull the latest zapz into the install directory
+# Newest release tag in the checkout (vX.Y.Z), or nothing
+_newest_release_tag() {
+    local tag latest=""
+    for tag in $(git -C "$ZAPZ_ROOT" tag -l 'v[0-9]*'); do
+        if [[ -z "$latest" ]] || version_gt "$tag" "$latest"; then
+            latest="$tag"
+        fi
+    done
+    printf '%s' "$latest"
+}
+
+# Update the zapz checkout.
+#   zapz --update            newest release; a branch you chose on purpose
+#                            (like main) keeps following that branch, and
+#                            one that's gone from GitHub returns to releases
+#   zapz --update latest     newest release, even from main
+#   zapz --update v0.3.0     that release (the only way to go back)
+#   zapz --update <branch>   follow a branch, e.g. to test a fix
 update_zapz() {
-    if [[ ! -d "${ZAPZ_ROOT}/.git" ]]; then
-        log_error "zapz at ${ZAPZ_ROOT} is not a git checkout; reinstall to update"
+    local target="${1:-}" root="$ZAPZ_ROOT"
+    if [[ ! -d "$root/.git" ]]; then
+        log_error "zapz at $(tilde_path "$root") is not a git checkout; reinstall to update:"
+        log_info "curl -fsSL https://raw.githubusercontent.com/${ZAPZ_REPO_SLUG}/main/install.sh | bash"
+        exit 1
+    fi
+    if [[ -n "$(git -C "$root" status --porcelain --untracked-files=no)" ]]; then
+        log_error "zapz has local changes in $(tilde_path "$root"), so it can't update over them."
+        log_info "To set them aside and update: git -C $(tilde_path "$root") stash && zapz --update"
         exit 1
     fi
 
-    local before after latest tag
-    before=$(git -C "$ZAPZ_ROOT" rev-parse HEAD)
-    log_info "Updating zapz..."
+    log_info "Checking for updates..."
+    if ! git -C "$root" fetch --quiet --tags --prune origin; then
+        log_error "Couldn't reach GitHub to check for updates. Check your internet connection and try again."
+        exit 1
+    fi
 
-    if git -C "$ZAPZ_ROOT" symbolic-ref -q HEAD >/dev/null; then
-        if ! git -C "$ZAPZ_ROOT" pull --ff-only --quiet; then
-            log_error "Update failed. Local changes in ${ZAPZ_ROOT} may be blocking it."
-            exit 1
-        fi
-    else
-        # Installed at a tag (ZAPZ_REF): move to the newest release tag
-        git -C "$ZAPZ_ROOT" fetch --quiet --tags origin
-        latest=""
-        for tag in $(git -C "$ZAPZ_ROOT" tag -l 'v[0-9]*'); do
-            if [[ -z "$latest" ]] || version_gt "$tag" "$latest"; then
-                latest="$tag"
+    local before latest branch dest="" follow=""
+    before=$(git -C "$root" rev-parse HEAD)
+    latest=$(_newest_release_tag)
+    branch=$(git -C "$root" symbolic-ref -q --short HEAD || true)
+
+    case "$target" in
+        "")
+            if [[ -n "$branch" ]] && git -C "$root" show-ref -q --verify "refs/remotes/origin/$branch"; then
+                follow="$branch"
+            elif [[ -n "$branch" ]]; then
+                log_warning "The $branch branch is no longer on GitHub; returning to the latest release."
+                dest="$latest"
+            elif [[ -n "$latest" ]] && version_gt "$latest" "$ZAPZ_VERSION"; then
+                dest="$latest"
+            else
+                log_success "zapz is already up to date (${ZAPZ_VERSION})"
+                return 0
             fi
-        done
-        # Never move backwards: an older tag isn't an update
-        if [[ -z "$latest" ]] || ! version_gt "$latest" "$ZAPZ_VERSION"; then
-            log_success "zapz is already up to date (${ZAPZ_VERSION})"
-            return 0
+            ;;
+        latest|release)
+            dest="$latest"
+            ;;
+        *)
+            if git -C "$root" show-ref -q --verify "refs/remotes/origin/$target"; then
+                follow="$target"
+            elif git -C "$root" show-ref -q --verify "refs/tags/v${target#v}"; then
+                dest="v${target#v}"
+            else
+                log_error "There's no zapz release or branch called '$target'."
+                [[ -z "$latest" ]] || log_info "The latest release is $latest. Run: zapz --update"
+                exit 1
+            fi
+            ;;
+    esac
+
+    if [[ -n "$follow" ]]; then
+        if [[ "$follow" == "$branch" ]]; then
+            if ! git -C "$root" merge --ff-only --quiet "origin/$follow"; then
+                log_error "Couldn't update the $follow branch: it has changes that aren't on GitHub."
+                log_info "To return to the latest release instead: zapz --update latest"
+                exit 1
+            fi
+        else
+            git -C "$root" checkout --quiet -B "$follow" "origin/$follow"
+            git -C "$root" branch --quiet --set-upstream-to="origin/$follow" "$follow" 2>/dev/null || true
         fi
-        if ! git -C "$ZAPZ_ROOT" checkout --quiet "$latest"; then
-            log_error "Update failed. Reinstall with: curl -fsSL https://raw.githubusercontent.com/${ZAPZ_REPO_SLUG}/main/install.sh | bash"
-            exit 1
+    elif [[ -n "$dest" ]]; then
+        git -C "$root" checkout --quiet "$dest"
+    else
+        # No releases at all: the default branch is the newest zapz
+        local default_ref
+        default_ref=$(git -C "$root" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/main)
+        git -C "$root" checkout --quiet -B "${default_ref#origin/}" "$default_ref"
+    fi
+
+    if [[ "$(git -C "$root" rev-parse HEAD)" == "$before" ]]; then
+        log_success "zapz is already up to date (${ZAPZ_VERSION}, $(_describe_checkout))"
+        return 0
+    fi
+    # Finish with the updated code, so new shell setup and notes apply
+    "$BASH" "$root/setup.sh" --after-update "$ZAPZ_VERSION"
+}
+
+# Where the checkout is: a release tag, or a branch and commit
+_describe_checkout() {
+    local ref
+    if ref=$(git -C "$ZAPZ_ROOT" describe --tags --exact-match 2>/dev/null); then
+        printf '%s' "$ref"
+    elif ref=$(git -C "$ZAPZ_ROOT" symbolic-ref -q --short HEAD); then
+        printf '%s branch, %s' "$ref" "$(git -C "$ZAPZ_ROOT" rev-parse --short HEAD)"
+    else
+        git -C "$ZAPZ_ROOT" rev-parse --short HEAD
+    fi
+}
+
+# Run by `zapz --update` from the new code: refresh the shell setup and say
+# what changed since version $1
+after_update() {
+    local from="$1"
+    install_cli_command "$ZAPZ_ROOT"
+    log_success "Updated zapz ${from} → ${ZAPZ_VERSION} ($(_describe_checkout))"
+    if version_gt "$ZAPZ_VERSION" "$from"; then
+        local notes
+        notes=$(changelog_since "$ZAPZ_ROOT/CHANGELOG.md" "$from")
+        if [[ -n "$notes" ]]; then
+            printf "\n  ${BOLD}What's new${NC}\n"
+            printf '%s\n' "$notes" | head -n 40 | sed 's/^/  /'
+            if (($(printf '%s\n' "$notes" | wc -l) > 40)); then
+                printf '  …and more: %s/blob/main/CHANGELOG.md\n' "https://github.com/${ZAPZ_REPO_SLUG}"
+            fi
         fi
     fi
-    after=$(git -C "$ZAPZ_ROOT" rev-parse HEAD)
-
-    if [[ "$before" == "$after" ]]; then
-        log_success "zapz is already up to date (${ZAPZ_VERSION})"
-    else
-        # Re-read the version from the updated checkout
-        log_success "Updated zapz to $(bash "${ZAPZ_ROOT}/setup.sh" --version | head -n1 | awk '{print $NF}')"
+    if [[ "${ZAPZ_BLOCK_CHANGED:-false}" == true ]]; then
+        log_info "Your shell setup changed; open a new terminal to pick it up."
     fi
 }
 
