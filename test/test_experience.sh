@@ -168,6 +168,15 @@ test_wizard_all_defaults() {
     assert_eq "$(yq e '.cron.update_schedule.enabled' "$f")" "true"
 }
 
+test_wizard_suggests_account_name() {
+    setup_sandbox; load_zapz
+    # With no git identity yet, Enter takes the Mac account's full name
+    printf 'Ada Lovelace' > "$STUB_STATE/full_name"
+    run_wizard_with '\n\n\n\n\n\n\n\n\n\n'
+    assert_eq "$(yq e '.git.user.name' "$SANDBOX/out.yml")" "Ada Lovelace"
+    assert_eq "$(yq e '.git.user.email' "$SANDBOX/out.yml")" "null" "a blank email stays unset"
+}
+
 test_wizard_re_asks_after_bad_input() {
     setup_sandbox; load_zapz
     # An out-of-range persona and a word, then a valid pick
