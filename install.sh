@@ -6,7 +6,8 @@
 # Environment overrides:
 #   ZAPZ_HOME    install location (default: ~/.local/share/zapz)
 #   ZAPZ_REPO    git URL to clone (default: https://github.com/corbanb/zapz.git)
-#   ZAPZ_REF     branch or tag to install (default: the repo's default branch)
+#   ZAPZ_REF     branch or tag to install (default: the latest release, or the
+#                default branch if there is no release yet)
 #   ZAPZ_SOURCE  local directory to copy instead of cloning (used by CI)
 
 set -euo pipefail
@@ -18,8 +19,8 @@ ZAPZ_SOURCE="${ZAPZ_SOURCE:-}"
 BIN_DIR="$HOME/.local/bin"
 
 # Minimal output helpers until the repo (and lib/logging.sh) is available
-print_info() { printf '\033[0;34mINFO: %s\033[0m\n' "$1"; }
-print_error() { printf '\033[0;31mERROR: %s\033[0m\n' "$1" >&2; }
+print_info() { printf '  \033[0;34m➜\033[0m %s\n' "$1"; }
+print_error() { printf '  \033[0;31m✗ %s\033[0m\n' "$1" >&2; }
 
 if [[ "$(uname)" != "Darwin" ]]; then
     print_error "zapz only works on macOS"
@@ -52,9 +53,18 @@ if ! git --version >/dev/null 2>&1; then
     exit 1
 fi
 
+printf '\n  \033[1m⚡ Installing zapz\033[0m\n\n'
+
+# Install the latest release by default: a tested version, not whatever is
+# on the main branch today. ZAPZ_REF=main opts into the latest code.
+if [[ -z "$ZAPZ_REF" && -z "$ZAPZ_SOURCE" && "$ZAPZ_REPO" == "https://github.com/corbanb/zapz.git" ]]; then
+    ZAPZ_REF=$(curl -fsS --max-time 10 https://api.github.com/repos/corbanb/zapz/releases/latest 2>/dev/null \
+        | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n1) || ZAPZ_REF=""
+fi
+
 # Fetch or update the code
 if [[ -n "$ZAPZ_SOURCE" ]]; then
-    print_info "Copying zapz from $ZAPZ_SOURCE..."
+    print_info "Copying zapz from $ZAPZ_SOURCE"
     mkdir -p "$ZAPZ_HOME"
     # Skip .git (read-only objects break re-copying) and the user's config
     tar -C "$ZAPZ_SOURCE" --exclude=./.git --exclude=./config/default.yml -cf - . \
@@ -82,15 +92,32 @@ else
     git clone --quiet ${ZAPZ_REF:+--branch "$ZAPZ_REF"} "$ZAPZ_REPO" "$ZAPZ_HOME"
 fi
 
+ZAPZ_ROOT="$ZAPZ_HOME"
+# shellcheck source=lib/version.sh
+source "$ZAPZ_HOME/lib/version.sh"
 # shellcheck source=lib/logging.sh
 source "$ZAPZ_HOME/lib/logging.sh"
 # shellcheck source=lib/utils.sh
 source "$ZAPZ_HOME/lib/utils.sh"
+# shellcheck source=lib/configure.sh
+source "$ZAPZ_HOME/lib/configure.sh"
 
-# Create the user's config from the example on first install
-if [[ ! -f "$ZAPZ_HOME/config/default.yml" ]]; then
-    log_info "Creating config at $ZAPZ_HOME/config/default.yml"
-    cp "$ZAPZ_HOME/config/default.yml.example" "$ZAPZ_HOME/config/default.yml"
+ensure_yq
+log_success "zapz ${ZAPZ_VERSION} is in $(tilde_path "$ZAPZ_HOME")"
+
+# First install: answer a few questions instead of editing YAML (or, with
+# no terminal to ask, start from the example config)
+config="$ZAPZ_HOME/config/default.yml"
+asked=false
+if [[ -f "$config" ]]; then
+    log_success "Keeping your config: $(tilde_path "$config")"
+elif can_prompt; then
+    open_prompt_input
+    run_config_wizard "$config"
+    asked=true
+else
+    cp "$ZAPZ_HOME/config/default.yml.example" "$config"
+    log_success "Created your config from the example: $(tilde_path "$config")"
 fi
 
 # Put the `zapz` command on PATH
@@ -104,6 +131,14 @@ esac
 export ZAPZ_HOME=\"$ZAPZ_HOME\"
 [ -f \"\$ZAPZ_HOME/lib/check_update.sh\" ] && . \"\$ZAPZ_HOME/lib/check_update.sh\""
 
-log_success "Installation complete!"
-log_info "Review your config: $ZAPZ_HOME/config/default.yml"
-log_info "Then open a new terminal and run: zapz"
+if [[ "$asked" == true ]]; then
+    printf "\n"
+    if confirm "  Preview and run setup now?" Y; then
+        # Hand the open terminal input to setup so answers carry over
+        export ZAPZ_PROMPT_FD
+        exec "$ZAPZ_HOME/setup.sh" <&"$ZAPZ_PROMPT_FD"
+    fi
+fi
+
+printf "\n  Installed. Open a new terminal, then run ${BOLD}zapz${NC} to preview and apply your setup.\n"
+printf "  ${DIM}Your config: %s · change it with zapz --configure${NC}\n" "$(tilde_path "$config")"

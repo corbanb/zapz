@@ -31,7 +31,7 @@ jobs:
         run: shellcheck -x setup.sh install.sh lib/*.sh lib/modules/*.sh test/*.sh scripts/*.sh
 
       - name: yamllint
-        run: yamllint -c .yamllint .github config/default.yml.example .yamllint
+        run: yamllint -c .yamllint .github config/default.yml.example config/presets .yamllint
 
   test:
     strategy:

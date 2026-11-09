@@ -136,25 +136,24 @@ test_homebrew_failure_does_not_abort() {
     setup_sandbox; load_zapz
     use_config <<< "$HOMEBREW_CONFIG"
     echo broken >> "$STUB_STATE/brew_fail"
-    local output
-    output=$(setup_homebrew 2>&1)
-    # Packages after the failing one are still installed
+    setup_homebrew > /dev/null 2>&1
+    # Packages after the failing one are still installed, and the failure
+    # is recorded for the summary
     assert_contains "$STUB_LOG" "brew install --cask iterm2"
-    [[ "$output" == *"formula broken"* ]] || fail "failure not reported: $output"
+    [[ " ${ZAPZ_FAILED[*]} " == *"broken"* ]] || fail "failure not recorded: ${ZAPZ_FAILED[*]}"
 }
 
 test_homebrew_rejects_invalid_yaml() {
     setup_sandbox; load_zapz
     use_config <<< 'homebrew: [unclosed'
-    if (setup_homebrew) >/dev/null 2>&1; then fail "invalid YAML accepted"; fi
-    assert_not_contains "$STUB_LOG" "brew update"
+    if (validate_configuration) >/dev/null 2>&1; then fail "invalid YAML accepted"; fi
 }
 
 test_bash_users_get_brew_and_nvm() {
     setup_sandbox; load_zapz
     export SHELL=/bin/bash
     fake_nvm
-    use_config <<< 'node: {}'
+    use_config <<< 'node: { versions: ["lts/lithium"] }'
     setup_homebrew
     setup_node
     assert_contains "$HOME/.bash_profile" "# >>> zapz homebrew >>>"
@@ -305,7 +304,7 @@ test_ssh_generates_key_with_passphrase_prompt() {
     stub ssh-keygen 'touch "$HOME/.ssh/id_ed25519" "$HOME/.ssh/id_ed25519.pub"'
     use_config <<< 'git: { user: { email: "ada@example.com" } }'
     setup_ssh
-    assert_contains "$STUB_LOG" "ssh-keygen -t ed25519 -C ada@example.com"
+    assert_contains "$STUB_LOG" "ssh-keygen -q -t ed25519 -C ada@example.com"
     assert_contains "$STUB_LOG" "ssh-add --apple-use-keychain"
     assert_contains "$HOME/.ssh/config" "IgnoreUnknown UseKeychain"
     assert_not_contains "$STUB_LOG" "-N"

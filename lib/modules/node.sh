@@ -29,63 +29,64 @@ load_nvm() {
 }
 
 setup_node() {
-    log_header "Setting up Node.js environment"
+    log_header "Node.js"
 
-    # Install NVM if not already installed
-    if ! load_nvm; then
-        log_info "Installing NVM ${ZAPZ_NVM_VERSION}..."
+    if [[ -z "$(config_list '.node.versions')" ]]; then
+        ui_item skipped "Node.js" "no versions in node.versions"
+        return 0
+    fi
+
+    if load_nvm; then
+        ui_item existing "nvm" "already installed"
+    else
         # PROFILE=/dev/null: the installer shouldn't edit rc files; zapz manages that
-        curl -fsSL "https://raw.githubusercontent.com/nvm-sh/nvm/${ZAPZ_NVM_VERSION}/install.sh" | PROFILE=/dev/null bash
+        run_quiet "nvm ${ZAPZ_NVM_VERSION}" /bin/bash -c \
+            "curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/${ZAPZ_NVM_VERSION}/install.sh | PROFILE=/dev/null bash" \
+            || true
         if ! load_nvm; then
-            log_error "NVM installation failed or not loaded"
+            log_error "nvm couldn't be installed; see the log above"
             exit 1
         fi
-    else
-        log_success "NVM already installed"
     fi
 
     # Load nvm in new shells
     write_managed_block "$(shell_rc_file)" "nvm" 'export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
 
-    # Install Node versions from config
-    log_info "Installing Node.js versions..."
     local version installed
     while IFS= read -r version; do
         [[ -n "$version" ]] || continue
         # `nvm version` prints N/A for versions that aren't installed
         installed=$(nvm_run version "$version" 2>/dev/null || true)
         if [[ -n "$installed" && "$installed" != "N/A" ]]; then
-            log_debug "Node.js $version already installed"
+            ui_item existing "Node.js $version" "$installed"
         else
-            log_debug "Installing Node.js $version"
-            nvm_run install "$version"
+            run_quiet "Node.js $version" nvm_run install "$version" || true
         fi
     done < <(config_list '.node.versions')
 
-    # Set default Node version
-    local default_version
+    local default_version current_default
     default_version=$(config_get '.node.default')
     if [[ -n "$default_version" ]]; then
-        log_info "Setting default Node.js version to $default_version"
-        nvm_run alias default "$default_version"
-        nvm_run use default >/dev/null
+        current_default=$(nvm_run alias default 2>/dev/null | head -n1 || true)
+        nvm_run alias default "$default_version" >/dev/null 2>&1 || true
+        nvm_run use default >/dev/null 2>&1 || true
+        if [[ "$current_default" == *"$default_version"* ]]; then
+            ui_item existing "default version" "$default_version"
+        else
+            ui_item changed "default version" "$default_version"
+        fi
     fi
 
-    # Install global npm packages
     if command_exists npm; then
-        log_info "Installing global npm packages..."
         local package
         while IFS= read -r package; do
             [[ -n "$package" ]] || continue
             if npm list -g --depth=0 "$package" &>/dev/null; then
-                log_debug "Global package already installed: $package"
+                ui_item existing "$package" "already installed"
             else
-                log_debug "Installing global package: $package"
-                npm install -g "$package" || log_warning "Failed to install npm package: $package"
+                run_quiet "$package" npm install -g "$package" || true
             fi
         done < <(config_list '.node.global_packages')
     fi
-
-    log_success "Node.js environment setup completed"
 }

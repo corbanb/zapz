@@ -48,3 +48,6 @@ node_modules/
 
 # Generated from README.md by the Pages workflow and scripts/run_docs.sh
 docs/index.md
+
+# yq binary downloaded by zapz (lib/utils.sh ensure_yq)
+/bin/

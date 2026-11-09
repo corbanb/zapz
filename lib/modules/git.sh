@@ -2,62 +2,92 @@
 
 # Set a global git option only if the user hasn't set it already
 git_config_default() {
-    if ! git config --global --get "$1" >/dev/null 2>&1; then
-        git config --global "$1" "$2"
+    if git config --global --get "$1" >/dev/null 2>&1; then
+        return 1
     fi
+    git config --global "$1" "$2"
+}
+
+# Ask for a git name/email that neither the config nor git has, so that
+# all questions happen before the long unattended part of setup.
+ask_git_identity() {
+    local key label value var
+    for key in user.name user.email; do
+        value=$(config_get ".git.$key")
+        if [[ -z "$value" ]] && ! git config --global --get "$key" >/dev/null 2>&1; then
+            label="name"
+            [[ "$key" == user.email ]] && label="email"
+            value=$(ask "Your $label for git commits")
+            var="ZAPZ_GIT_${label}"
+            printf -v "$var" '%s' "$value"
+        fi
+    done
 }
 
 setup_git() {
-    log_header "Setting up Git configuration"
+    log_header "Git"
 
-    # Ensure git is installed
     if ! command_exists git; then
-        log_error "Git is not installed. Please run setup_homebrew first."
+        log_error "git is missing; install the Xcode Command Line Tools first"
         exit 1
     fi
 
-    # Only set values the config provides, so blank fields never
-    # clobber an identity the user already has. On a fresh Mac there is
-    # none yet, so ask when someone is at the keyboard.
-    log_info "Configuring Git user settings..."
-    local key value label
+    # Only set values the config (or your answers) provide, so blank fields
+    # never clobber an identity you already have
+    local key value label current
     for key in user.name user.email; do
+        label="name"
+        [[ "$key" == user.email ]] && label="email"
         value=$(config_get ".git.$key")
-        if [[ -z "$value" ]] && ! git config --global --get "$key" >/dev/null 2>&1 \
-                && [[ -t 0 ]]; then
-            label="name"
-            [[ "$key" == user.email ]] && label="email"
-            read -r -p "Your $label for git commits: " value || value=""
+        if [[ -z "$value" ]]; then
+            local var="ZAPZ_GIT_${label}"
+            value="${!var:-}"
         fi
-        if [[ -n "$value" ]]; then
+        current=$(git config --global --get "$key" || true)
+        if [[ -n "$value" && "$value" != "$current" ]]; then
             git config --global "$key" "$value"
-        elif ! git config --global --get "$key" >/dev/null 2>&1; then
-            log_warning "git $key is not set; add git.$key to your config or run: git config --global $key \"...\""
+            ui_item changed "$label" "$value"
+        elif [[ -n "$current" ]]; then
+            ui_item existing "$label" "$current"
+        else
+            ui_item skipped "$label" "not set"
+            add_next_step "Set your git $label: git config --global $key \"...\""
         fi
     done
 
+    # Options from the config: editor, default branch and the git.config map
+    local entry options=()
     value=$(config_get '.git.editor')
-    [[ -z "$value" ]] || git config --global core.editor "$value"
-
+    [[ -z "$value" ]] || options+=("core.editor=$value")
     value=$(config_get '.git.default_branch')
-    [[ -z "$value" ]] || git config --global init.defaultBranch "$value"
-
-    # Arbitrary options from the git.config map, e.g. pull.rebase: "true"
-    local entry
+    [[ -z "$value" ]] || options+=("init.defaultBranch=$value")
     while IFS= read -r entry; do
-        [[ -n "$entry" ]] || continue
-        git config --global "${entry%%=*}" "${entry#*=}"
+        [[ -n "$entry" ]] && options+=("$entry")
     done < <(yq e '(.git.config // {}) | to_entries | .[] | .key + "=" + (.value | tostring)' "$CONFIG_FILE")
 
-    # Convenience aliases, without overriding the user's own
-    log_info "Setting up Git aliases..."
-    git_config_default alias.co checkout
-    git_config_default alias.br branch
-    git_config_default alias.ci commit
-    git_config_default alias.st status
-    git_config_default alias.unstage 'reset HEAD --'
-    git_config_default alias.last 'log -1 HEAD'
-    git_config_default color.ui auto
+    if ((${#options[@]} > 0)); then
+        for entry in "${options[@]}"; do
+            key="${entry%%=*}"
+            value="${entry#*=}"
+            if [[ "$(git config --global --get "$key" || true)" == "$value" ]]; then
+                ui_item existing "$key" "$value"
+            else
+                git config --global "$key" "$value"
+                ui_item changed "$key" "$value"
+            fi
+        done
+    fi
 
-    log_success "Git configuration completed"
+    # Convenience aliases, without overriding the user's own
+    local added=0 alias
+    for alias in "co checkout" "br branch" "ci commit" "st status" \
+            "unstage reset HEAD --" "last log -1 HEAD"; do
+        git_config_default "alias.${alias%% *}" "${alias#* }" && added=$((added + 1))
+    done
+    git_config_default color.ui auto || true
+    if ((added > 0)); then
+        ui_item changed "aliases" "co, br, ci, st, unstage, last"
+    else
+        ui_item existing "aliases" "already set"
+    fi
 }

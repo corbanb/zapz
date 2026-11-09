@@ -1,0 +1,54 @@
+---
+# Web development: Essentials plus Node.js, Bun, Deno, Docker Desktop and 1Password
+git:
+  editor: "code --wait"
+  default_branch: "main"
+  config:
+    pull.rebase: "true"
+
+node:
+  versions:
+    - "lts/lithium"   # Node.js 26
+    - "lts/krypton"   # Node.js 24
+  default: "lts/lithium"
+  global_packages:
+    - "pnpm"
+    - "typescript"
+
+homebrew:
+  taps: []
+  formulas:
+    - "git"
+    - "gh"
+    - "jq"
+    - "ripgrep"
+    - "fd"
+    - "tree"
+    - "wget"
+    - "oven-sh/bun/bun"
+    - "deno"
+  casks:
+    - "visual-studio-code"
+    - "iterm2"
+    - "docker-desktop"
+    - "1password"
+
+macos:
+  dock:
+    autohide: true
+    minimize-to-application: true
+  keyboard:
+    key_repeat: 2
+    initial_key_repeat: 15
+  finder:
+    show_all_extensions: true
+    show_hidden_files: true
+    show_path_bar: true
+    show_status_bar: true
+
+cron:
+  update_schedule:
+    enabled: true
+    frequency: "weekly"
+    time: "09:00"
+    days: ["Monday"]

@@ -83,14 +83,14 @@ remove_legacy_cron_job() {
     local current
     current=$(crontab -l 2>/dev/null) || return 0
     if grep -q 'mac-setup-update' <<< "$current"; then
-        log_info "Removing the old cron-based update job"
+        ui_item changed "old cron job" "removed"
         # grep -v exits 1 when it removes every line
         { grep -v 'mac-setup-update' <<< "$current" || true; } | crontab -
     fi
 }
 
 setup_scheduled_updates() {
-    log_header "Setting up scheduled updates"
+    log_header "Scheduled updates"
 
     local plist
     plist=$(launch_agent_path)
@@ -99,11 +99,11 @@ setup_scheduled_updates() {
 
     if ! config_enabled '.cron.update_schedule.enabled'; then
         if [[ -f "$plist" ]]; then
-            log_info "Removing scheduled updates (disabled in config)"
             unload_launch_agent "$plist"
             rm -f "$plist"
+            ui_item changed "Scheduled updates" "turned off"
         else
-            log_info "Scheduled updates are disabled in config"
+            ui_item existing "Scheduled updates" "off"
         fi
         return 0
     fi
@@ -124,7 +124,9 @@ setup_scheduled_updates() {
     local log_dir="$HOME/Library/Logs/zapz"
     mkdir -p "$(dirname "$plist")" "$log_dir"
 
-    cat > "$plist" << EOF
+    local new_plist
+    new_plist=$(mktemp)
+    cat > "$new_plist" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -148,11 +150,39 @@ ${intervals}
 </plist>
 EOF
 
+    local description
+    description=$(describe_schedule)
+    if cmp -s "$new_plist" "$plist" && launchctl print "gui/$(id -u)/${ZAPZ_LAUNCH_AGENT_LABEL}" >/dev/null 2>&1; then
+        rm -f "$new_plist"
+        ui_item existing "Scheduled updates" "$description"
+        return 0
+    fi
+    mv "$new_plist" "$plist"
+
     # Reload so schedule changes take effect
     unload_launch_agent "$plist"
     if load_launch_agent "$plist"; then
-        log_success "Scheduled $frequency updates at $(printf '%02d:%02d' "$hour" "$minute")"
+        ui_item changed "Scheduled updates" "$description"
     else
-        log_warning "Could not load $plist; load it later with: launchctl bootstrap gui/$(id -u) $plist"
+        ui_item failed "Scheduled updates" "couldn't load the launch agent"
+        add_next_step "Load scheduled updates: launchctl bootstrap gui/$(id -u) $(tilde_path "$plist")"
     fi
+}
+
+# Human description of the configured schedule, e.g. "weekly, Monday 09:00"
+describe_schedule() {
+    if ! config_enabled '.cron.update_schedule.enabled'; then
+        echo "off"
+        return 0
+    fi
+    local frequency time days
+    frequency=$(config_get '.cron.update_schedule.frequency' daily)
+    time=$(config_get '.cron.update_schedule.time' '09:00')
+    case "$frequency" in
+        weekly)
+            days=$(config_list '.cron.update_schedule.days' | paste -sd, - | sed 's/,/, /g')
+            echo "weekly, ${days:-?} $time" ;;
+        monthly) echo "monthly, on the 1st at $time" ;;
+        *) echo "daily at $time" ;;
+    esac
 }

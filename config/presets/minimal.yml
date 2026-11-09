@@ -1,0 +1,33 @@
+---
+# Minimal: command-line tools only; no apps, no Node.js
+git:
+  default_branch: "main"
+  config:
+    pull.rebase: "true"
+
+homebrew:
+  taps: []
+  formulas:
+    - "git"
+    - "gh"
+    - "jq"
+    - "ripgrep"
+    - "fd"
+    - "tree"
+    - "wget"
+  casks: []
+
+macos:
+  keyboard:
+    key_repeat: 2
+    initial_key_repeat: 15
+  finder:
+    show_all_extensions: true
+    show_path_bar: true
+
+cron:
+  update_schedule:
+    enabled: true
+    frequency: "weekly"
+    time: "09:00"
+    days: ["Monday"]

@@ -1,0 +1,41 @@
+---
+# Essentials: everyday command-line tools, VS Code and iTerm2
+git:
+  editor: "code --wait"
+  default_branch: "main"
+  config:
+    pull.rebase: "true"
+
+homebrew:
+  taps: []
+  formulas:
+    - "git"
+    - "gh"
+    - "jq"
+    - "ripgrep"
+    - "fd"
+    - "tree"
+    - "wget"
+  casks:
+    - "visual-studio-code"
+    - "iterm2"
+
+macos:
+  dock:
+    autohide: true
+    minimize-to-application: true
+  keyboard:
+    key_repeat: 2
+    initial_key_repeat: 15
+  finder:
+    show_all_extensions: true
+    show_hidden_files: true
+    show_path_bar: true
+    show_status_bar: true
+
+cron:
+  update_schedule:
+    enabled: true
+    frequency: "weekly"
+    time: "09:00"
+    days: ["Monday"]

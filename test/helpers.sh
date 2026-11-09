@@ -115,7 +115,7 @@ setup_sandbox() {
     trap 'rm -rf "$SANDBOX"' EXIT
 
     local name
-    for name in defaults osascript killall sudo launchctl pbcopy ssh-add gh xcode-select sw_vers; do
+    for name in defaults osascript killall sudo launchctl pbcopy ssh-add gh xcode-select sw_vers DevToolsSecurity; do
         stub "$name"
     done
     stub_brew
@@ -142,6 +142,11 @@ state="$STUB_STATE/brew"
 case "$1" in
     list)
         name="${!#}"
+        # `brew list --formula -1 ...` with no name lists everything installed
+        if [[ "$name" == -* ]]; then
+            grep -v "^tap:" "$state"
+            exit 0
+        fi
         grep -qx "$name" "$state"
         exit $?
         ;;
@@ -180,6 +185,10 @@ load_zapz() {
     source "$PROJECT_ROOT/lib/logging.sh"
     # shellcheck source=../lib/utils.sh
     source "$PROJECT_ROOT/lib/utils.sh"
+    # shellcheck source=../lib/plan.sh
+    source "$PROJECT_ROOT/lib/plan.sh"
+    # shellcheck source=../lib/configure.sh
+    source "$PROJECT_ROOT/lib/configure.sh"
     local module
     for module in "$PROJECT_ROOT"/lib/modules/*.sh; do
         # shellcheck source=/dev/null

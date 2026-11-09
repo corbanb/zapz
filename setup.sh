@@ -27,6 +27,10 @@ source "${ZAPZ_ROOT}/lib/version.sh"
 source "${ZAPZ_ROOT}/lib/logging.sh"
 # shellcheck source=lib/utils.sh
 source "${ZAPZ_ROOT}/lib/utils.sh"
+# shellcheck source=lib/plan.sh
+source "${ZAPZ_ROOT}/lib/plan.sh"
+# shellcheck source=lib/configure.sh
+source "${ZAPZ_ROOT}/lib/configure.sh"
 
 # Source all setup modules
 source "${ZAPZ_ROOT}/lib/modules/xcode.sh"
@@ -46,6 +50,8 @@ GIST_URL=""
 VERBOSE=false
 SKIP_MACOS=false
 SKIP_SCHEDULE=false
+DRY_RUN=false
+ASSUME_YES=false
 
 # Usage information; exits with $1 (default 0)
 usage() {
@@ -56,17 +62,21 @@ Usage: zapz [OPTIONS]
 Set up a macOS development environment from a YAML config.
 
 Options:
-    -h, --help             Show this help message
-    -v, --verbose          Enable verbose output
-    --version              Show version information
-    --update               Update zapz to the latest version
+    -n, --dry-run          Show what would happen, change nothing
+    -y, --yes              Don't ask for confirmation
+    --configure            Answer a few questions to (re)create your config
     -c, --config FILE      Use custom config file
     -g, --gist URL         Use settings from a GitHub Gist raw URL
     --skip-macos           Skip macOS preferences setup
     --skip-schedule        Skip scheduled update setup (alias: --skip-cron)
+    --update               Update zapz to the latest version
+    -v, --verbose          Enable verbose output
+    --version              Show version information
+    -h, --help             Show this help message
 
 Examples:
-    zapz --verbose --config custom.yml
+    zapz --dry-run
+    zapz --config ~/dotfiles/zapz.yml
     zapz --gist https://gist.githubusercontent.com/user/id/raw/config.yml
 EOF
     exit "$status"
@@ -98,6 +108,17 @@ parse_arguments() {
             --update)
                 update_zapz
                 exit 0
+                ;;
+            -n|--dry-run)
+                DRY_RUN=true
+                shift
+                ;;
+            -y|--yes)
+                ASSUME_YES=true
+                shift
+                ;;
+            --configure)
+                configure_and_exit
                 ;;
             -c|--config)
                 require_value "$@"
@@ -189,42 +210,114 @@ check_platform() {
     fi
 }
 
-cleanup() {
-    rm -f "${ZAPZ_GIST_CONFIG:-}"
+# Re-run the setup wizard to write config/default.yml, then stop
+configure_and_exit() {
+    ensure_yq
+    if ! can_prompt; then
+        log_error "--configure asks questions, so it needs a terminal"
+        exit 1
+    fi
+    open_prompt_input
+    run_config_wizard "$DEFAULT_CONFIG"
+    printf "\n  Next: run ${BOLD}zapz${NC} to preview and apply it.\n"
+    exit 0
 }
 
-# Main setup function
-main() {
-    log_header "Starting macOS Development Environment Setup"
+# Ask for the password once, up front, and keep sudo's timestamp fresh so
+# nothing later stops to ask again while you're away
+start_admin_session() {
+    printf "\n  zapz needs your Mac password to install Homebrew and apps.\n"
+    printf "  It asks once now, so the rest can run without you.\n"
+    if ! sudo -v; then
+        log_error "Couldn't get administrator access. zapz needs an admin account."
+        exit 1
+    fi
+    # Detached from the terminal so it can't hold zapz's output open, and it
+    # stops its own sleep when told to exit
+    (
+        trap 'kill "$sleeper" 2>/dev/null; exit 0' TERM
+        while sudo -n true 2>/dev/null && kill -0 "$$" 2>/dev/null; do
+            sleep 50 &
+            sleeper=$!
+            wait "$sleeper"
+        done
+    ) < /dev/null > /dev/null 2>&1 &
+    ZAPZ_SUDO_KEEPALIVE_PID=$!
+}
 
+cleanup() {
+    rm -f "${ZAPZ_GIST_CONFIG:-}"
+    [[ -z "${ZAPZ_SUDO_KEEPALIVE_PID:-}" ]] || kill "$ZAPZ_SUDO_KEEPALIVE_PID" 2>/dev/null || true
+}
+
+print_banner() {
+    local arch="Intel"
+    [[ "$(uname -m)" == arm64 ]] && arch="Apple Silicon"
+    printf "\n  ${BOLD}⚡ zapz %s${NC} ${DIM}· macOS %s · %s${NC}\n" \
+        "$ZAPZ_VERSION" "$(sw_vers -productVersion)" "$arch"
+}
+
+main() {
     check_platform
     trap cleanup EXIT
 
+    ensure_yq
     load_configuration
-    # Catch YAML mistakes before changing anything (yq may not exist yet on
-    # a fresh Mac; setup_homebrew validates again once it's installed)
-    if is_compatible_yq; then
-        validate_configuration
+    validate_configuration
+
+    print_banner
+    show_plan
+
+    if [[ "$DRY_RUN" == true ]]; then
+        printf "\n  Dry run: nothing was changed. Run ${BOLD}zapz${NC} to apply.\n"
+        exit 0
     fi
 
-    # Run setup modules
+    if can_prompt; then
+        open_prompt_input
+    fi
+    if [[ "$ASSUME_YES" != true ]]; then
+        if [[ -z "${ZAPZ_PROMPT_FD:-}" ]]; then
+            log_error "There's no terminal to confirm with. Run with --yes to continue without asking."
+            exit 1
+        fi
+        printf "\n"
+        if ! confirm "  Continue?" Y; then
+            printf "  Nothing was changed.\n"
+            exit 0
+        fi
+    fi
+
+    # Every question up front, so the long part can run unattended
+    [[ -z "${ZAPZ_PROMPT_FD:-}" ]] || ask_git_identity
+    if [[ "$PLAN_NEEDS_ADMIN" == true ]]; then
+        start_admin_session
+    fi
+
+    ensure_log_file
+    local start=$SECONDS
+    ZAPZ_STEP_TOTAL=8
+    [[ "$SKIP_MACOS" == true ]] && ZAPZ_STEP_TOTAL=$((ZAPZ_STEP_TOTAL - 1))
+    [[ "$SKIP_SCHEDULE" == true ]] && ZAPZ_STEP_TOTAL=$((ZAPZ_STEP_TOTAL - 1))
+
     install_xcode_tools
-    setup_homebrew
     setup_git
     setup_ssh
+    setup_homebrew
     setup_node
+    [[ "$SKIP_MACOS" == true ]] || setup_macos_preferences
+    [[ "$SKIP_SCHEDULE" == true ]] || setup_scheduled_updates
+    setup_github
 
-    # Optional setups
-    if [[ "$SKIP_MACOS" != "true" ]]; then
-        setup_macos_preferences
+    add_next_step "Open a new terminal (or run: exec \$SHELL -l) to start using everything"
+    local elapsed=$((SECONDS - start))
+    ui_summary "$elapsed"
+
+    if ((${#ZAPZ_FAILED[@]} > 0)); then
+        notify "Setup finished with ${#ZAPZ_FAILED[@]} problem(s)"
+        exit 1
     fi
-
-    if [[ "$SKIP_SCHEDULE" != "true" ]]; then
-        setup_scheduled_updates
-    fi
-
-    log_success "Setup completed successfully!"
-    log_info "Open a new terminal to pick up PATH and shell changes."
+    ((elapsed < 60)) || notify "Your Mac is ready"
 }
 
 # Run only when executed, so tests can source this file

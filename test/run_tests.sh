@@ -6,7 +6,7 @@
 TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 failed=0
-for suite in test.sh test_modules.sh test_install.sh; do
+for suite in test.sh test_modules.sh test_install.sh test_experience.sh; do
     printf '\n### %s\n' "$suite"
     "$BASH" "$TEST_DIR/$suite" || failed=1
 done

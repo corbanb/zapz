@@ -24,27 +24,116 @@ is_compatible_yq() {
     command_exists yq && yq --version 2>&1 | grep -q "mikefarah"
 }
 
-# Ensure a compatible yq is installed (requires Homebrew)
+# zapz reads its config with yq. A pinned, checksum-verified copy is
+# downloaded into $ZAPZ_ROOT/bin, so the config can be read (and previewed)
+# before anything else is installed. A compatible yq already on PATH is used
+# as is.
+ZAPZ_YQ_VERSION="v4.54.2"
+
+_yq_sha256() {
+    case "$1" in
+        arm64) echo "34923a7ca09a32a4257702ced5f7f2e5e83b16968cce3866f5ff830e4ce1cdd4" ;;
+        amd64) echo "651e61c6a13085d6a88d30c54fa74e894d4bb18461b5e8522d3dd00a327fb3bd" ;;
+        *) return 1 ;;
+    esac
+}
+
 ensure_yq() {
-    if is_compatible_yq; then
+    is_compatible_yq && return 0
+
+    local bin_dir="${ZAPZ_ROOT}/bin"
+    if [[ ! -x "$bin_dir/yq" ]] || ! "$bin_dir/yq" --version 2>&1 | grep -q mikefarah; then
+        local arch expected actual tmp
+        case "$(uname -m)" in
+            arm64|aarch64) arch=arm64 ;;
+            x86_64) arch=amd64 ;;
+            *) log_error "Unsupported CPU: $(uname -m)"; exit 1 ;;
+        esac
+        expected=$(_yq_sha256 "$arch")
+        tmp=$(mktemp)
+        if ! curl -fsSL --retry 2 -o "$tmp" \
+                "https://github.com/mikefarah/yq/releases/download/${ZAPZ_YQ_VERSION}/yq_darwin_${arch}"; then
+            rm -f "$tmp"
+            log_error "Couldn't download yq (needed to read your config). Check your internet connection."
+            exit 1
+        fi
+        actual=$(shasum -a 256 "$tmp" 2>/dev/null || sha256sum "$tmp")
+        if [[ "${actual%% *}" != "$expected" ]]; then
+            rm -f "$tmp"
+            log_error "The downloaded yq didn't match its expected checksum; not using it"
+            exit 1
+        fi
+        mkdir -p "$bin_dir"
+        chmod 755 "$tmp"
+        mv "$tmp" "$bin_dir/yq"
+    fi
+    export PATH="$bin_dir:$PATH"
+}
+
+# Where this run's backups go; files are copied there before zapz edits them
+ZAPZ_RUN_ID="${ZAPZ_RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
+ZAPZ_BACKUP_DIR="${ZAPZ_BACKUP_DIR:-$HOME/.local/state/zapz/backups/$ZAPZ_RUN_ID}"
+
+# Copy a file into this run's backup directory (once per run)
+backup_file() {
+    local file="$1" dest
+    [[ -f "$file" ]] || return 0
+    case "$file" in
+        "$HOME"/*) dest="$ZAPZ_BACKUP_DIR/${file#"$HOME"/}" ;;
+        *) dest="$ZAPZ_BACKUP_DIR/${file#/}" ;;
+    esac
+    [[ -e "$dest" ]] && return 0
+    mkdir -p "$(dirname "$dest")"
+    cp -p "$file" "$dest"
+}
+
+# Questions for the user. They read from $ZAPZ_TTY (default /dev/tty) so they
+# work under `curl | bash`, where stdin is the script itself.
+can_prompt() {
+    [[ -z "${ZAPZ_NONINTERACTIVE:-}" ]] || return 1
+    # Already open, e.g. handed over by install.sh when it starts setup
+    if [[ -n "${ZAPZ_PROMPT_FD:-}" ]] && { true <&"$ZAPZ_PROMPT_FD"; } 2>/dev/null; then
         return 0
     fi
-
-    if command_exists yq; then
-        log_warning "Found incompatible yq ($(command -v yq)); zapz needs mikefarah/yq"
+    if [[ -n "${ZAPZ_TTY:-}" ]]; then
+        [[ -r "$ZAPZ_TTY" ]]
+    else
+        { : < /dev/tty; } 2>/dev/null
     fi
+}
 
-    log_info "Installing yq..."
-    if ! brew install yq; then
-        log_error "Failed to install yq"
-        exit 1
+# Usage: ask <prompt> [default]  (prints the answer)
+ask() {
+    local prompt="$1" default="${2:-}" reply=""
+    if [[ -n "$default" ]]; then
+        printf '%s [%s]: ' "$prompt" "$default" >&2
+    else
+        printf '%s: ' "$prompt" >&2
     fi
+    IFS= read -r reply <&"${ZAPZ_PROMPT_FD:-0}" || true
+    # Echo answers that came from a file so transcripts read naturally
+    [[ -t "${ZAPZ_PROMPT_FD:-0}" ]] || printf '%s\n' "$reply" >&2
+    printf '%s\n' "${reply:-$default}"
+}
 
-    if ! is_compatible_yq; then
-        log_error "An incompatible yq is still first on your PATH: $(command -v yq)"
-        log_info "Remove it or put $(brew --prefix)/bin earlier in PATH, then re-run"
-        exit 1
+# Usage: confirm <prompt> [Y|N]  (succeeds on yes)
+confirm() {
+    local answer default="${2:-Y}" hint="[Y/n]"
+    [[ "$default" == Y ]] || hint="[y/N]"
+    printf '%s %s ' "$1" "$hint" >&2
+    IFS= read -r answer <&"${ZAPZ_PROMPT_FD:-0}" || answer=""
+    [[ -t "${ZAPZ_PROMPT_FD:-0}" ]] || printf '%s\n' "$answer" >&2
+    answer="${answer:-$default}"
+    [[ "$answer" == [Yy]* ]]
+}
+
+# Open the prompt input on fd 9 (call once, before ask/confirm)
+open_prompt_input() {
+    if [[ -n "${ZAPZ_PROMPT_FD:-}" ]] && { true <&"$ZAPZ_PROMPT_FD"; } 2>/dev/null; then
+        return 0
     fi
+    exec 9< "${ZAPZ_TTY:-/dev/tty}"
+    ZAPZ_PROMPT_FD=9
 }
 
 # Print a scalar config value, or $2 if the key is missing, null or empty.
@@ -106,7 +195,8 @@ write_managed_block() {
     local end="# <<< zapz ${name} <<<"
     local block tmp
 
-    touch "$file"
+    # Create it if missing, but don't touch an existing file's timestamp
+    [[ -e "$file" ]] || : > "$file"
     # Without an end marker we can't tell where the block stops
     if grep -qxF "$begin" "$file" && ! grep -qxF "$end" "$file"; then
         log_warning "$file has \"$begin\" but no \"$end\"; leaving it unchanged"
@@ -128,8 +218,16 @@ write_managed_block() {
         !skipping
         END { if (!written) emit() }
     ' "$file" > "$tmp"
+    rm -f "$block"
+
+    # Leave the file alone (no backup, no new timestamp) when nothing changes
+    if cmp -s "$tmp" "$file"; then
+        rm -f "$tmp"
+        return 0
+    fi
+    [[ ! -s "$file" ]] || backup_file "$file"
     cat "$tmp" > "$file"
-    rm -f "$tmp" "$block"
+    rm -f "$tmp"
 }
 
 # Download file from URL
