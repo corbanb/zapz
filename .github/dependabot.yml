@@ -1,11 +1,24 @@
 ---
+# One weekly PR per ecosystem instead of one PR per dependency.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      github-actions:
+        patterns: ["*"]
   - package-ecosystem: bundler
     directory: /docs
     schedule:
-      interval: monthly
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      docs-bundler:
+        patterns: ["*"]
