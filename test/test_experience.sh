@@ -204,7 +204,7 @@ test_failed_command_shows_only_its_own_output() {
     setup_sandbox; load_zapz
     ZAPZ_LOG="$SANDBOX/run.log"
     echo "output from an earlier step" > "$ZAPZ_LOG"
-    # shellcheck disable=SC2317  # called indirectly by run_quiet
+    # shellcheck disable=SC2317,SC2329  # called indirectly by run_quiet
     noisy_failure() { printf '###### 45.6%%\rthe real error\n'; return 3; }
     local out status=0
     out=$(run_quiet "demo" noisy_failure 2>&1) || status=$?
