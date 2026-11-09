@@ -29,7 +29,7 @@ $hits"
 
 test_executable_bits() {
     local file mode
-    for file in setup.sh install.sh lib/maintenance.sh test/run_tests.sh; do
+    for file in setup.sh install.sh lib/askpass.sh lib/maintenance.sh test/run_tests.sh scripts/release.sh; do
         mode=$(git -C "$PROJECT_ROOT" ls-files -s "$file" | awk '{print $1}')
         assert_eq "$mode" "100755" "git file mode of $file"
     done
@@ -94,6 +94,49 @@ test_shellcheck() {
     (cd "$PROJECT_ROOT" && shellcheck -x setup.sh install.sh lib/*.sh lib/modules/*.sh test/*.sh scripts/*.sh)
 }
 
+# scripts/release.sh: the file edits it makes, without git or the network
+release_fn() {
+    # shellcheck source=/dev/null
+    ( source "$PROJECT_ROOT/scripts/release.sh"; "$@" )
+}
+
+test_release_promotes_unreleased() {
+    local log out
+    log=$(mktemp)
+    printf '# Changelog\n\n## [Unreleased]\n\n### Fixed\n- A thing.\n\n## [0.3.0] - 2026-11-09\n\n- Old.\n' > "$log"
+    out=$(release_fn promote_changelog "$log" 0.3.1 2026-11-10)
+    assert_eq "$(printf '%s\n' "$out" | grep -c '^## \[Unreleased\]$')" "1" "one Unreleased heading"
+    printf '%s\n' "$out" | grep -q '^## \[0.3.1\] - 2026-11-10$' || fail "no 0.3.1 heading"
+    assert_eq "$(release_fn changelog_section <(printf '%s\n' "$out") 0.3.1 | grep -c 'A thing')" "1" "entry moved under 0.3.1"
+    assert_eq "$(release_fn changelog_section <(printf '%s\n' "$out") Unreleased | grep -c '[^[:space:]]')" "0" "Unreleased left empty"
+    rm -f "$log"
+}
+
+test_release_refuses_empty_unreleased() {
+    local log
+    log=$(mktemp)
+    printf '## [Unreleased]\n\n## [0.3.0] - 2026-11-09\n- Old.\n' > "$log"
+    if release_fn promote_changelog "$log" 0.3.1 2026-11-10 >/dev/null 2>&1; then
+        fail "accepted an empty Unreleased section"
+    fi
+    printf '## [0.3.0] - 2026-11-09\n- Old.\n' > "$log"
+    if release_fn promote_changelog "$log" 0.3.1 2026-11-10 >/dev/null 2>&1; then
+        fail "accepted a changelog without Unreleased"
+    fi
+    rm -f "$log"
+}
+
+test_release_bumps_version_file() {
+    assert_eq "$(release_fn bump_version_file "$PROJECT_ROOT/lib/version.sh" 9.8.7 | release_fn read_version)" "9.8.7" "bumped version"
+    assert_eq "$(release_fn bump_version_file "$PROJECT_ROOT/lib/version.sh" 9.8.7 | grep -c ZAPZ_MIN_MACOS_VERSION)" "1" "other lines kept"
+}
+
+test_release_validates_version() {
+    release_fn is_semver 0.3.1 || fail "rejected 0.3.1"
+    if release_fn is_semver 0.3; then fail "accepted 0.3"; fi
+    if release_fn is_semver v0.3.1; then fail "accepted v0.3.1 (main strips the v)"; fi
+}
+
 if ! is_compatible_yq_available=$(yq --version 2>&1) || [[ "$is_compatible_yq_available" != *mikefarah* ]]; then
     echo "These tests need mikefarah/yq (brew install yq)" >&2
     exit 1
@@ -112,5 +155,11 @@ run_test "default config is created from the example" test_config_created_from_e
 run_test "custom config path is used" test_custom_config_used
 run_test "missing custom config fails" test_missing_custom_config_fails
 run_test "gist URLs must use https" test_gist_requires_https
+
+section "release script"
+run_test "moves Unreleased changes under the new version" test_release_promotes_unreleased
+run_test "refuses an empty or missing Unreleased section" test_release_refuses_empty_unreleased
+run_test "bumps only ZAPZ_VERSION" test_release_bumps_version_file
+run_test "accepts only X.Y.Z versions" test_release_validates_version
 
 finish_tests

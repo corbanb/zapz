@@ -145,11 +145,30 @@ The wizard's personas, extras and their questions live in `catalog/`, so most
 
 ## Releasing
 
-1. Bump `ZAPZ_VERSION` in `lib/version.sh` and add a `CHANGELOG.md` entry.
-2. After merging, tag the commit: `git tag v0.2.0 && git push origin v0.2.0`.
+Releases are cut with `scripts/release.sh`, run from a clean, up-to-date
+`main` with the GitHub CLI signed in. It takes two runs with the same version:
 
-The release workflow checks that the tag matches `lib/version.sh`, then
-publishes a GitHub release.
+```bash
+scripts/release.sh --dry-run 0.3.1   # preview: shows the diffs and commands
+scripts/release.sh 0.3.1             # 1) opens a "chore(release): 0.3.1" PR
+# ...merge that PR on GitHub...
+git pull --ff-only
+scripts/release.sh 0.3.1             # 2) tags v0.3.1 and publishes the release
+```
+
+1. The first run checks that CI passed on `main`, sets `ZAPZ_VERSION` in
+   `lib/version.sh`, moves everything under `## [Unreleased]` in
+   `CHANGELOG.md` to `## [0.3.1] - <today>`, and opens a PR from
+   `release/v0.3.1` (`main` is protected, so the bump goes through a PR).
+2. The second run, once `main` has the new version, checks CI on the merge
+   commit, tags it `v0.3.1`, pushes the tag, waits for the Release workflow
+   and prints the release URL.
+
+Add changes under `## [Unreleased]` as you go; the script refuses to release
+an empty section. Tags always start with `v` (`v0.3.1`): the Release workflow
+only runs for `v*` tags and checks the tag matches `lib/version.sh`, and
+`zapz --update` only looks at `v` tags. The workflow attaches `install.sh` and
+marks the release Latest, which is what `install.sh` installs.
 
 ## License
 

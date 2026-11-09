@@ -39,7 +39,7 @@ setup_homebrew() {
         if brew tap | grep -qx "$tap"; then
             ui_item existing "$tap" "tap already added"
         else
-            run_quiet "$tap" brew tap "$tap" || continue
+            run_quiet --watch "$tap" brew tap "$tap" || continue
         fi
         # Homebrew 6+ won't load formulas from a third-party tap until it is
         # trusted. Listing a tap in your config is that decision.
@@ -54,7 +54,7 @@ setup_homebrew() {
         if is_formula_installed "$formula"; then
             ui_item existing "$formula" "already installed"
         else
-            run_quiet "$formula" brew install "$formula" || true
+            run_quiet --watch "$formula" brew install "$formula" || true
         fi
     done < <(config_list '.homebrew.formulas')
 
@@ -67,7 +67,7 @@ setup_homebrew() {
             ui_item existing "$cask" "installed outside Homebrew"
         else
             # A failure is reported in the summary and setup carries on
-            run_quiet "$cask" brew install --cask "$cask" || true
+            run_quiet --watch "$cask" brew install --cask "$cask" || true
         fi
     done < <(config_list '.homebrew.casks')
 }

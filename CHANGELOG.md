@@ -5,6 +5,35 @@ All notable changes to zapz will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `zapz --update` can take a target: a release to go back to
+  (`zapz --update v0.3.0`), a branch to test (`zapz --update fix/thing`), or
+  `latest`. After updating it shows what's new and refreshes zapz's lines in
+  your shell config.
+
+### Changed
+- `zapz --update` on a branch that's been deleted on GitHub (a merged test
+  branch) returns to the latest release instead of failing, and the error for
+  local edits says how to set them aside.
+
+### Fixed
+- Apps that install with a system installer (Google Drive, Zoom, Docker and
+  others) no longer stop setup. Homebrew 7 forgets the password zapz asks for
+  at the start; zapz now keeps it valid, and if an installer still needs a
+  password, a Mac password dialog asks for it.
+- An install that shows no progress for 3 minutes now says what to check
+  (a password or permission dialog, possibly behind other windows). After 15
+  minutes with no progress it's stopped and listed as failed, and setup
+  carries on.
+- Downloading yq retries through GitHub outages (it gave up on 504s), and
+  the error says you can `brew install yq` instead.
+- The installer creates the `zapz` command before downloading yq, so a
+  failed download no longer leaves you without it.
+- The installer retries looking up the latest release and says so when it
+  falls back to the newest code on main.
+
 ## [0.3.0] - 2026-11-09
 
 Set up a Mac for the way you work, not just for web development.

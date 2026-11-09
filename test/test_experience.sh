@@ -291,6 +291,66 @@ test_housekeeping_is_not_counted_as_a_change() {
     assert_eq "$ZAPZ_COUNT_CHANGED" 1
 }
 
+test_watched_install_that_goes_quiet_is_stopped() {
+    setup_sandbox; load_zapz
+    ZAPZ_LOG="$SANDBOX/run.log"
+    stub quietinstaller 'echo "Running installer"; exec sleep 30'
+    local out status=0 began=$SECONDS
+    out=$(ZAPZ_STALL_WARN_SECS=1 ZAPZ_STALL_STOP_SECS=2 run_quiet --watch "Demo" quietinstaller 2>&1) || status=$?
+    assert_eq "$status" 124 "exit status"
+    [[ "$out" == *"no progress"* && "$out" == *"dialog"* ]] || fail "no warning: $out"
+    [[ "$out" == *"stopped"* && "$out" == *"quietinstaller"* ]] || fail "no stop message: $out"
+    ((SECONDS - began < 20)) || fail "took $((SECONDS - began))s"
+    assert_contains "$ZAPZ_LOG" "stopped: Demo"
+}
+
+test_watched_install_with_progress_keeps_going() {
+    setup_sandbox; load_zapz
+    ZAPZ_LOG="$SANDBOX/run.log"
+    stub slowdownload 'for n in 1 2 3 4 5 6 7 8; do echo "progress"; sleep 0.5; done'
+    local out status=0
+    out=$(ZAPZ_STALL_WARN_SECS=2 ZAPZ_STALL_STOP_SECS=2 run_quiet --watch "Demo" slowdownload 2>&1) || status=$?
+    assert_eq "$status" 0 "exit status"
+    [[ "$out" != *"no progress"* ]] || fail "warned during a working download: $out"
+}
+
+test_watched_failure_reports_its_output() {
+    setup_sandbox; load_zapz
+    ZAPZ_LOG="$SANDBOX/run.log"
+    stub badinstall 'echo "Error: no such cask"; exit 4'
+    local out status=0
+    out=$(run_quiet --watch "Demo" badinstall 2>&1) || status=$?
+    assert_eq "$status" 4 "exit status"
+    [[ "$out" == *"no such cask"* ]] || fail "$out"
+}
+
+test_admin_session_keeps_sudo_for_homebrew() {
+    setup_sandbox; load_zapz
+    # shellcheck source=../setup.sh
+    source "$PROJECT_ROOT/setup.sh"
+    stub sudo 'exit 0'
+    unset HOMEBREW_SUDO_CHECKED SUDO_ASKPASS SSH_CONNECTION
+    ZAPZ_PROMPT_FD=0
+    start_admin_session > /dev/null
+    kill "$ZAPZ_SUDO_KEEPALIVE_PID" 2>/dev/null || true
+    assert_eq "${HOMEBREW_SUDO_CHECKED:-}" "1" "HOMEBREW_SUDO_CHECKED"
+    assert_eq "${SUDO_ASKPASS:-}" "$PROJECT_ROOT/lib/askpass.sh" "SUDO_ASKPASS"
+    [[ -x "$SUDO_ASKPASS" ]] || fail "askpass helper isn't executable"
+}
+
+test_admin_session_skips_dialog_over_ssh() {
+    setup_sandbox; load_zapz
+    # shellcheck source=../setup.sh
+    source "$PROJECT_ROOT/setup.sh"
+    stub sudo 'exit 0'
+    unset HOMEBREW_SUDO_CHECKED SUDO_ASKPASS
+    SSH_CONNECTION="1.2.3.4 5 6.7.8.9 22" ZAPZ_PROMPT_FD=0
+    start_admin_session > /dev/null
+    kill "$ZAPZ_SUDO_KEEPALIVE_PID" 2>/dev/null || true
+    assert_eq "${HOMEBREW_SUDO_CHECKED:-}" "1" "HOMEBREW_SUDO_CHECKED"
+    assert_eq "${SUDO_ASKPASS:-}" "" "SUDO_ASKPASS"
+}
+
 test_no_color_without_a_terminal() {
     local out
     out=$("$BASH" -c ". '$PROJECT_ROOT/lib/logging.sh'; log_success hi" | od -c)
@@ -616,6 +676,11 @@ test_weekly_updates_skip_app_store_without_sudo() {
 }
 
 section "second review"
+run_test "a watched install that goes quiet is warned about, then stopped" test_watched_install_that_goes_quiet_is_stopped
+run_test "a watched install that shows progress isn't stopped" test_watched_install_with_progress_keeps_going
+run_test "a watched install that fails shows its output" test_watched_failure_reports_its_output
+run_test "admin access survives Homebrew and adds a password dialog" test_admin_session_keeps_sudo_for_homebrew
+run_test "no password dialog over SSH" test_admin_session_skips_dialog_over_ssh
 run_test "numbers with leading zeros and blank answers" test_numbers_with_leading_zeros_and_spaces
 run_test "an unattended install gets the recommended config" test_unattended_install_gets_recommended_config
 run_test "--dry-run without a config previews the recommended setup" test_dry_run_without_config_previews_recommended_setup

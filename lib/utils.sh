@@ -64,10 +64,14 @@ ensure_yq() {
         esac
         expected=$(_yq_sha256 "$arch")
         tmp=$(mktemp)
-        if ! curl -fsSL --retry 2 -o "$tmp" \
+        # GitHub's download servers sometimes answer 5xx for a minute; ride
+        # that out instead of failing the whole setup
+        if ! curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 15 -o "$tmp" \
                 "https://github.com/mikefarah/yq/releases/download/${ZAPZ_YQ_VERSION}/yq_darwin_${arch}"; then
             rm -f "$tmp"
-            log_error "Couldn't download yq (needed to read your config). Check your internet connection."
+            log_error "Couldn't download yq from GitHub (zapz needs it to read your config)."
+            log_info "Check your internet connection, or GitHub may be having trouble: try again in a few minutes."
+            log_info "Or install it with Homebrew (brew install yq), then try again."
             exit 1
         fi
         actual=$(_sha256 "$tmp")
@@ -196,6 +200,37 @@ shell_rc_file() {
         */bash) printf '%s\n' "$HOME/.bash_profile" ;;
         *) printf '%s\n' "$HOME/.zshrc" ;;
     esac
+}
+
+# Print the changelog sections newer than version $2 (not Unreleased)
+# Usage: changelog_since <CHANGELOG.md> <version>
+changelog_since() {
+    [[ -f "$1" ]] || return 0
+    awk -v from="${2#v}" '
+        /^## \[Unreleased\]/ { next }
+        /^## \[/ {
+            v = $0; sub(/^## \[/, "", v); sub(/\].*/, "", v)
+            if (v == from) exit
+            on = 1
+        }
+        on { print }
+    ' "$1" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}'
+}
+
+# Put the `zapz` command on PATH and have new shells show the update
+# notice. Safe to run again: install.sh and `zapz --update` both call it, so
+# an update also brings changes to these lines.
+# Usage: install_cli_command <zapz checkout>
+install_cli_command() {
+    local home="$1" bin_dir="$HOME/.local/bin"
+    mkdir -p "$bin_dir"
+    ln -sf "$home/setup.sh" "$bin_dir/zapz"
+    write_managed_block "$(shell_rc_file)" "cli" "case \":\$PATH:\" in
+    *\":\$HOME/.local/bin:\"*) ;;
+    *) export PATH=\"\$HOME/.local/bin:\$PATH\" ;;
+esac
+export ZAPZ_HOME=\"$home\"
+[ -f \"\$ZAPZ_HOME/lib/check_update.sh\" ] && . \"\$ZAPZ_HOME/lib/check_update.sh\""
 }
 
 # Write a block into a shell rc file between marker comments. An existing

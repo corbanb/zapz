@@ -24,7 +24,7 @@ setup_app_store() {
         [[ -n "$id" ]] || continue
         if grep -qx "$id" <<< "$installed"; then
             ui_item existing "$name" "already installed"
-        elif ! run_quiet --soft "sign in to the App Store or buy it first" "$name" mas install "$id"; then
+        elif ! run_quiet --soft "sign in to the App Store or buy it first" --watch "$name" mas install "$id"; then
             add_checklist "Get $name from the App Store (sign in or buy it first)" \
                 "macappstore://apps.apple.com/app/id$id"
         fi
