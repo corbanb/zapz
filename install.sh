@@ -73,7 +73,12 @@ elif [[ -d "$ZAPZ_HOME/.git" ]]; then
     print_info "Updating existing installation in $ZAPZ_HOME..."
     if [[ -n "$ZAPZ_REF" ]]; then
         git -C "$ZAPZ_HOME" fetch --quiet origin "$ZAPZ_REF"
-        git -C "$ZAPZ_HOME" checkout --quiet FETCH_HEAD
+        if git -C "$ZAPZ_HOME" ls-remote --exit-code --heads origin "$ZAPZ_REF" >/dev/null 2>&1; then
+            # A branch: stay on it so `zapz --update` can pull
+            git -C "$ZAPZ_HOME" checkout --quiet -B "$ZAPZ_REF" FETCH_HEAD
+        else
+            git -C "$ZAPZ_HOME" checkout --quiet FETCH_HEAD
+        fi
     elif git -C "$ZAPZ_HOME" symbolic-ref -q HEAD >/dev/null; then
         git -C "$ZAPZ_HOME" pull --ff-only --quiet
     else

@@ -78,7 +78,14 @@ setup_node() {
         fi
     fi
 
-    if command_exists npm; then
+    # Global packages need an active Node.js; without a default, use the
+    # first version listed
+    if ! command_exists npm; then
+        nvm_run use "${default_version:-$(config_list '.node.versions' | head -n1)}" >/dev/null 2>&1 || true
+    fi
+    if ! command_exists npm && [[ -n "$(config_list '.node.global_packages')" ]]; then
+        ui_item skipped "npm packages" "no Node.js version is active"
+    elif command_exists npm; then
         local package
         while IFS= read -r package; do
             [[ -n "$package" ]] || continue

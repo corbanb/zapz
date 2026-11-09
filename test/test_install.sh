@@ -150,6 +150,26 @@ test_gives_up_if_command_line_tools_never_install() {
     assert_no_file "$HOME/.local/share/zapz/setup.sh"
 }
 
+test_update_never_downgrades() {
+    setup_sandbox
+    stub uname 'echo Darwin'
+    make_release_repo
+    # Only an old tag exists, like v0.1.0 on GitHub today
+    git -C "$ORIGIN" tag -d v0.3.0 >/dev/null
+    local zapz_home="$HOME/.local/share/zapz"
+    ZAPZ_REPO="$ORIGIN" ZAPZ_REF=main "$BASH" "$PROJECT_ROOT/install.sh" > /dev/null
+    # Re-installing a branch stays on the branch
+    ZAPZ_REPO="$ORIGIN" ZAPZ_REF=main "$BASH" "$PROJECT_ROOT/install.sh" > /dev/null
+    assert_eq "$(git -C "$zapz_home" symbolic-ref --short HEAD)" "main"
+
+    git -C "$zapz_home" checkout -q --detach
+    local before out
+    before=$(git -C "$zapz_home" rev-parse HEAD)
+    out=$("$BASH" "$zapz_home/setup.sh" --update 2>&1)
+    assert_eq "$(git -C "$zapz_home" rev-parse HEAD)" "$before" "moved to an older tag"
+    [[ "$out" == *"already up to date"* ]] || fail "$out"
+}
+
 section "install.sh"
 run_test "fresh install creates checkout, config, command and rc block" test_fresh_install
 run_test "reinstall keeps config and doesn't duplicate rc changes" test_reinstall_is_idempotent
@@ -157,6 +177,7 @@ run_test "installed rc block sources cleanly" test_shell_rc_sources_cleanly
 run_test "bash users get ~/.bash_profile" test_bash_users_get_bash_profile
 run_test "refuses to install over an unrelated directory" test_refuses_non_zapz_directory
 run_test "tag installs can update and return to the default branch" test_ref_install_can_update
+run_test "--update never moves to an older version" test_update_never_downgrades
 run_test "refuses to run outside macOS" test_refuses_non_macos
 run_test "installs the Command Line Tools on a fresh Mac" test_installs_command_line_tools_first
 run_test "gives up if the Command Line Tools never install" test_gives_up_if_command_line_tools_never_install

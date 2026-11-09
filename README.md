@@ -159,9 +159,10 @@ zapz exits with status 1 if any item failed, so scripts can tell.
 
 The setup wizard writes `~/.local/share/zapz/config/default.yml` from one of
 the [presets](config/presets/) and your answers. Edit it any time, or re-run
-`zapz --configure`; updates never overwrite it, and the previous version is
-backed up. Anything you leave out or leave empty is skipped. Every option is
-documented in [`config/default.yml.example`](config/default.yml.example).
+`zapz --configure`, which asks before replacing it and backs up the old one.
+Updates never overwrite it. Anything you leave out or leave empty is skipped.
+Every option is documented in
+[`config/default.yml.example`](config/default.yml.example).
 
 ```yaml
 git:

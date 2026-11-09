@@ -38,6 +38,19 @@ _yq_sha256() {
     esac
 }
 
+# Print a file's SHA-256 (macOS has shasum; openssl is a fallback)
+_sha256() {
+    if command_exists shasum; then
+        shasum -a 256 "$1"
+    elif command_exists sha256sum; then
+        sha256sum "$1"
+    elif command_exists openssl; then
+        openssl dgst -sha256 -r "$1"
+    else
+        echo "unavailable"
+    fi
+}
+
 ensure_yq() {
     is_compatible_yq && return 0
 
@@ -57,7 +70,7 @@ ensure_yq() {
             log_error "Couldn't download yq (needed to read your config). Check your internet connection."
             exit 1
         fi
-        actual=$(shasum -a 256 "$tmp" 2>/dev/null || sha256sum "$tmp")
+        actual=$(_sha256 "$tmp")
         if [[ "${actual%% *}" != "$expected" ]]; then
             rm -f "$tmp"
             log_error "The downloaded yq didn't match its expected checksum; not using it"
@@ -290,6 +303,22 @@ load_configuration() {
 # Check if a cask is already installed via Homebrew
 is_app_installed() {
     brew list --cask "$1" >/dev/null 2>&1
+}
+
+# Succeeds if a cask's app is already in /Applications (or ~/Applications)
+# although Homebrew didn't install it, e.g. installed by hand or by MDM
+is_app_installed_outside_brew() {
+    local apps app dir
+    apps=$(brew info --cask --json=v2 "$1" 2>/dev/null \
+        | yq -p json '.casks[0].artifacts[] | select(has("app")) | .app[] | select(tag == "!!str")' 2>/dev/null) \
+        || return 1
+    while IFS= read -r app; do
+        [[ -n "$app" ]] || continue
+        for dir in "${ZAPZ_APPLICATIONS_DIR:-/Applications}" "$HOME/Applications"; do
+            [[ -d "$dir/$app" ]] && return 0
+        done
+    done <<< "$apps"
+    return 1
 }
 
 # Homebrew 6 added `brew trust` (tap trust); older versions don't have it

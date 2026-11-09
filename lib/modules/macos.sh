@@ -73,6 +73,11 @@ setup_macos_preferences() {
     log_header "macOS settings"
     ZAPZ_MACOS_CHANGED=false
 
+    if [[ -z "$(configured_macos_settings)" ]] && ! config_enabled '.macos.developer_mode'; then
+        ui_item skipped "macOS settings" "none in your config"
+        return 0
+    fi
+
     # Close the settings app so it doesn't overwrite our changes
     # (renamed from System Preferences in macOS 13)
     osascript -e 'tell application "System Settings" to quit' &>/dev/null || true

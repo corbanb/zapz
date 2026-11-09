@@ -77,7 +77,17 @@ show_plan() {
     _partition_installed "$installed_formulas" "$(config_list '.homebrew.formulas')"
     _plan_row "Packages" "$(_describe_packages)"
 
-    _partition_installed "$installed_casks" "$(config_list '.homebrew.casks')"
+    # Apps installed by hand count as present, as they do during setup
+    local casks="" cask
+    while IFS= read -r cask; do
+        [[ -n "$cask" ]] || continue
+        if [[ "$have_brew" == true ]] && ! grep -qxF -- "$cask" <<< "$installed_casks" \
+                && is_app_installed_outside_brew "$cask"; then
+            installed_casks="$installed_casks"$'\n'"$cask"
+        fi
+        casks="$casks$cask"$'\n'
+    done < <(config_list '.homebrew.casks')
+    _partition_installed "$installed_casks" "$casks"
     [[ -z "$PLAN_MISSING" ]] || PLAN_NEEDS_ADMIN=true
     _plan_row "Apps" "$(_describe_packages)"
 
@@ -111,8 +121,12 @@ show_plan() {
     else
         text=$(configured_macos_settings | sed 's/|/ /' | _join)
         if config_enabled '.macos.developer_mode'; then
-            text="${text:+$text, }Developer Mode"
-            PLAN_NEEDS_ADMIN=true
+            if DevToolsSecurity -status 2>/dev/null | grep -q enabled; then
+                text="${text:+$text, }Developer Mode (already on)"
+            else
+                text="${text:+$text, }Developer Mode"
+                PLAN_NEEDS_ADMIN=true
+            fi
         fi
         text="${text:-no changes}"
     fi
@@ -125,7 +139,14 @@ show_plan() {
     fi
     _plan_row "Updates" "$text"
 
-    _plan_row "GitHub" "sign in with the GitHub CLI (optional, at the end)"
+    if command_exists gh && gh auth status >/dev/null 2>&1; then
+        text="already signed in"
+    elif command_exists gh || config_list '.homebrew.formulas' | grep -qx gh; then
+        text="sign in with the GitHub CLI (optional, at the end)"
+    else
+        text="skipped (add gh to homebrew.formulas to sign in)"
+    fi
+    _plan_row "GitHub" "$text"
 
     printf "\n  ${DIM}Only missing things are installed; what you already have is left alone.${NC}\n"
     printf "  ${DIM}Shell and SSH files are backed up before they're edited.${NC}\n"

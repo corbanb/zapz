@@ -16,7 +16,7 @@ On a new Mac, the installer first opens Apple's Command Line Tools dialog
 
 zapz installs everything else it needs, including Homebrew. It reads your
 config with [yq](https://github.com/mikefarah/yq), which it downloads (a
-pinned, checksum-verified copy) into `~/.local/share/zapz/bin`; you don't need
+pinned, checksum-verified copy) into the `bin` folder of your zapz install; you don't need
 to install it.
 
 ## Installation

@@ -177,7 +177,12 @@ update_zapz() {
                 latest="$tag"
             fi
         done
-        if [[ -z "$latest" ]] || ! git -C "$ZAPZ_ROOT" checkout --quiet "$latest"; then
+        # Never move backwards: an older tag isn't an update
+        if [[ -z "$latest" ]] || ! version_gt "$latest" "$ZAPZ_VERSION"; then
+            log_success "zapz is already up to date (${ZAPZ_VERSION})"
+            return 0
+        fi
+        if ! git -C "$ZAPZ_ROOT" checkout --quiet "$latest"; then
             log_error "Update failed. Reinstall with: curl -fsSL https://raw.githubusercontent.com/${ZAPZ_REPO_SLUG}/main/install.sh | bash"
             exit 1
         fi
@@ -218,6 +223,14 @@ configure_and_exit() {
         exit 1
     fi
     open_prompt_input
+    if [[ -f "$DEFAULT_CONFIG" ]]; then
+        printf "\n  This replaces your current config, including any edits you made.\n"
+        printf "  It's saved first to %s\n\n" "$(tilde_path "$ZAPZ_BACKUP_DIR")"
+        if ! confirm "  Replace your config?" N; then
+            printf "  Nothing was changed.\n"
+            exit 0
+        fi
+    fi
     run_config_wizard "$DEFAULT_CONFIG"
     printf "\n  Next: run ${BOLD}zapz${NC} to preview and apply it.\n"
     exit 0
@@ -226,6 +239,15 @@ configure_and_exit() {
 # Ask for the password once, up front, and keep sudo's timestamp fresh so
 # nothing later stops to ask again while you're away
 start_admin_session() {
+    # Without a terminal there's no one to type a password
+    if [[ -z "${ZAPZ_PROMPT_FD:-}" ]]; then
+        if sudo -n true 2>/dev/null; then
+            return 0
+        fi
+        log_error "Homebrew and apps need administrator access, and there's no terminal to ask for a password."
+        log_info "Run zapz in a terminal, or allow passwordless sudo for this account."
+        exit 1
+    fi
     printf "\n  zapz needs your Mac password to install Homebrew and apps.\n"
     printf "  It asks once now, so the rest can run without you.\n"
     if ! sudo -v; then
@@ -262,6 +284,10 @@ main() {
     trap cleanup EXIT
 
     ensure_yq
+    # A dry run reads the example config rather than creating one
+    if [[ "$DRY_RUN" == true && -z "$CUSTOM_CONFIG" && -z "$GIST_URL" && ! -f "$DEFAULT_CONFIG" ]]; then
+        CUSTOM_CONFIG="${DEFAULT_CONFIG}.example"
+    fi
     load_configuration
     validate_configuration
 

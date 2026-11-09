@@ -74,8 +74,10 @@ test_yes_runs_everything_and_summarizes() {
     assert_contains "$STUB_LOG" "brew install --cask iterm2"
     assert_not_contains "$STUB_LOG" "brew install jq"
     assert_eq "$(git config --global user.name)" "Ada"
-    # The password was asked for once, up front, because an app was missing
-    assert_count "$STUB_LOG" "sudo -v" 1
+    # Admin access was checked once, up front, because an app was missing
+    # (without a terminal that's passwordless sudo, not a password prompt)
+    assert_count "$STUB_LOG" "sudo -n true" 1
+    assert_not_contains "$STUB_LOG" "sudo -v"
 
     # A second run installs nothing again
     out=$(ZAPZ_NONINTERACTIVE=1 zapz --yes 2>&1)
@@ -228,8 +230,106 @@ test_no_color_without_a_terminal() {
     [[ "$out" != *"033"* ]] || fail "color codes written to a pipe"
 }
 
+# --- fixes from review ----------------------------------------------------
+
+# A copy of zapz without a config, for tests that touch config/default.yml
+copy_zapz() {
+    ZAPZ_COPY="$SANDBOX/zapz"
+    mkdir -p "$ZAPZ_COPY"
+    tar -C "$PROJECT_ROOT" --exclude=./.git --exclude=./config/default.yml -cf - . \
+        | tar -C "$ZAPZ_COPY" -xf -
+}
+
+test_dry_run_doesnt_create_a_config() {
+    setup_mac_sandbox
+    copy_zapz
+    "$BASH" "$ZAPZ_COPY/setup.sh" --dry-run > /dev/null 2>&1
+    assert_no_file "$ZAPZ_COPY/config/default.yml"
+}
+
+test_configure_asks_before_replacing() {
+    setup_sandbox
+    copy_zapz
+    echo "mine: true" > "$ZAPZ_COPY/config/default.yml"
+    printf 'n\n' > "$SANDBOX/answers"
+    local out
+    out=$(ZAPZ_TTY="$SANDBOX/answers" "$BASH" "$ZAPZ_COPY/setup.sh" --configure 2>&1)
+    [[ "$out" == *"replaces your current config"* ]] || fail "$out"
+    assert_contains "$ZAPZ_COPY/config/default.yml" "mine: true"
+}
+
+test_apps_installed_outside_homebrew_are_not_failures() {
+    setup_mac_sandbox
+    export ZAPZ_APPLICATIONS_DIR="$SANDBOX/Applications"
+    mkdir -p "$ZAPZ_APPLICATIONS_DIR/iTerm.app"
+    # brew info names iTerm.app as the cask's app; installing it would fail
+    cp "$STUB_BIN/brew" "$STUB_BIN/brew.base"
+    stub brew '
+if [[ "$1" == info ]]; then echo "{\"casks\":[{\"artifacts\":[{\"app\":[\"iTerm.app\"]}]}]}"; exit 0; fi
+[[ "$1" == install && "$2" == --cask ]] && exit 1
+exec "$(dirname "$0")/brew.base" "$@"'
+    local out status=0
+    out=$(zapz --dry-run 2>&1)
+    [[ "$out" == *"all 1 already installed"* ]] || fail "preview: $out"
+    out=$(ZAPZ_NONINTERACTIVE=1 zapz --yes 2>&1) || status=$?
+    assert_eq "$status" 0 "exit status"
+    [[ "$out" == *"installed outside Homebrew"* ]] || fail "$out"
+    assert_not_contains "$STUB_LOG" "brew install --cask iterm2"
+}
+
+test_yes_without_passwordless_sudo_explains() {
+    setup_mac_sandbox
+    stub sudo '[[ "$1" == -n ]] && exit 1; exit 0'
+    local out status=0
+    out=$(ZAPZ_NONINTERACTIVE=1 zapz --yes 2>&1) || status=$?
+    assert_eq "$status" 1 "exit status"
+    [[ "$out" == *"no terminal to ask for a password"* ]] || fail "$out"
+    assert_not_contains "$STUB_LOG" "brew install"
+}
+
+# An nvm whose install/use put a fake npm on PATH, like the real one
+fake_nvm_with_npm() {
+    mkdir -p "$HOME/.nvm" "$SANDBOX/node/bin"
+    printf '#!/bin/sh\necho "npm $*" >> "$STUB_LOG"\n[ "$1" = list ] && exit 1\nexit 0\n' \
+        > "$SANDBOX/node/bin/npm"
+    chmod +x "$SANDBOX/node/bin/npm"
+    {
+        echo 'nvm() {'
+        echo '    echo "nvm $*" >> "$STUB_LOG"'
+        echo '    case "$1" in'
+        echo '        version) echo N/A ;;'
+        echo "        install|use) PATH=\"$SANDBOX/node/bin:\$PATH\" ;;"
+        echo '    esac'
+        echo '}'
+    } > "$HOME/.nvm/nvm.sh"
+}
+
+test_global_packages_without_a_default_version() {
+    setup_sandbox; load_zapz
+    fake_nvm_with_npm
+    use_config <<< 'node: { versions: ["26"], global_packages: ["pnpm"] }'
+    setup_node > /dev/null
+    assert_contains "$STUB_LOG" "nvm install 26"
+    assert_contains "$STUB_LOG" "npm install -g pnpm"
+}
+
+test_empty_macos_step_is_skipped() {
+    setup_sandbox; load_zapz
+    use_config <<< 'git: {}'
+    local out
+    out=$(setup_macos_preferences 2>&1)
+    [[ "$out" == *"none in your config"* ]] || fail "$out"
+    assert_not_contains "$STUB_LOG" "osascript"
+}
+
 section "preview and confirmation"
 run_test "--dry-run previews and changes nothing" test_dry_run_previews_without_changing_anything
+run_test "--dry-run doesn't create a config" test_dry_run_doesnt_create_a_config
+run_test "--configure asks before replacing a config" test_configure_asks_before_replacing
+run_test "apps installed by hand aren't failures" test_apps_installed_outside_homebrew_are_not_failures
+run_test "--yes without passwordless sudo explains why" test_yes_without_passwordless_sudo_explains
+run_test "npm packages install without a default Node version" test_global_packages_without_a_default_version
+run_test "an empty macOS step is skipped quietly" test_empty_macos_step_is_skipped
 run_test "without a terminal, --yes is required" test_without_a_terminal_requires_yes
 run_test "answering no changes nothing" test_declining_changes_nothing
 run_test "--yes runs every step, then summarizes" test_yes_runs_everything_and_summarizes

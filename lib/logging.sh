@@ -121,9 +121,34 @@ _format_duration() {
     fi
 }
 
+# Spinner shown while a command runs; started in the background and killed
+# when the command finishes
+_spinner() {
+    local label="$1" start="$2" i=0
+    # An array, not a string: bash 3.2 may slice multi-byte text by bytes
+    local frames=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
+    while true; do
+        printf "\r  ${BLUE}%s${NC} %-28s ${DIM}%s${NC}" \
+            "${frames[i % 10]}" "$label" "$(_format_duration $((SECONDS - start)))"
+        i=$((i + 1))
+        sleep 0.1
+    done
+}
+
+_stop_spinner() {
+    [[ -n "${ZAPZ_SPINNER_PID:-}" ]] || return 0
+    kill "$ZAPZ_SPINNER_PID" 2>/dev/null || true
+    wait "$ZAPZ_SPINNER_PID" 2>/dev/null || true
+    ZAPZ_SPINNER_PID=""
+    printf '\r\033[K'
+}
+
 # Run a noisy command quietly: show a spinner (on a terminal) and then a
 # single result line; send its output to the log, and show the end of it
 # only if it fails. Returns the command's exit status.
+#
+# The command runs in the foreground, so Ctrl-C stops it (not just zapz)
+# and shell functions such as nvm keep their effects in this shell.
 # Usage: run_quiet [--housekeeping] <label> <command> [args...]
 # --housekeeping: success isn't counted as a change in the summary
 run_quiet() {
@@ -134,9 +159,7 @@ run_quiet() {
     fi
     local label="$1"
     shift
-    local start=$SECONDS status=0 pid i=0
-    # An array, not a string: bash 3.2 may slice multi-byte text by bytes
-    local frames=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
+    local start=$SECONDS status=0
     ensure_log_file
     printf '\n$ %s\n' "$*" >> "$ZAPZ_LOG"
     # Remember where this command's output starts, to show only it on failure
@@ -144,18 +167,14 @@ run_quiet() {
     first_line=$(($(wc -l < "$ZAPZ_LOG") + 1))
 
     if [[ -t 1 ]]; then
-        "$@" < /dev/null >> "$ZAPZ_LOG" 2>&1 &
-        pid=$!
-        while kill -0 "$pid" 2>/dev/null; do
-            printf "\r  ${BLUE}%s${NC} %-28s ${DIM}%s${NC}" \
-                "${frames[i % 10]}" "$label" "$(_format_duration $((SECONDS - start)))"
-            i=$((i + 1))
-            sleep 0.1
-        done
-        wait "$pid" || status=$?
-        printf '\r\033[K'
-    else
-        "$@" < /dev/null >> "$ZAPZ_LOG" 2>&1 || status=$?
+        _spinner "$label" "$start" &
+        ZAPZ_SPINNER_PID=$!
+        trap '_stop_spinner; printf "  Stopped.\n"; exit 130' INT TERM
+    fi
+    "$@" < /dev/null >> "$ZAPZ_LOG" 2>&1 || status=$?
+    if [[ -t 1 ]]; then
+        trap - INT TERM
+        _stop_spinner
     fi
 
     if ((status == 0)); then

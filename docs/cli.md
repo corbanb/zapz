@@ -37,12 +37,12 @@ Options:
 | *(none)* | Preview and, once you confirm, run the full setup using `~/.local/share/zapz/config/default.yml`. If that file is missing, it is created from `config/default.yml.example` first. |
 | `-n`, `--dry-run` | Show the preview ("Here's what zapz will do") and exit. Nothing on your Mac is changed. |
 | `-y`, `--yes` | Don't ask "Continue?" after the preview. Required when there is no terminal to answer from (scripts, CI). |
-| `--configure` | Run the setup wizard again: it asks your name, email, which preset to start from, and whether to apply macOS settings and scheduled updates, then rewrites `config/default.yml` and exits. The previous config is backed up first. Needs a terminal. |
+| `--configure` | Run the setup wizard again: it asks your name, email, which preset to start from, and whether to apply macOS settings and scheduled updates, then rewrites `config/default.yml` and exits. If you already have a config, it asks before replacing it and saves a copy to `~/.local/state/zapz/backups/<date-time>/` first. Needs a terminal. |
 | `-c`, `--config FILE` | Use `FILE` instead of the default config. zapz exits with an error if the file doesn't exist. |
 | `-g`, `--gist URL` | Download the config from `URL` and use it for this run. The URL must use `https`. Use the gist's **Raw** URL, for example `https://gist.githubusercontent.com/USER/ID/raw/config.yml`. The download goes to a private temp file that is deleted when zapz exits. If you pass both `-c` and `-g`, the gist is used. |
 | `--skip-macos` | Skip the macOS settings step (Dock, keyboard, Finder, Developer Mode). |
 | `--skip-schedule` | Skip the scheduled updates step. `--skip-cron` is an alias. |
-| `--update` | Update zapz itself, then exit. A branch install is updated with `git pull --ff-only`; a release install (the default) moves to the newest release tag. Fails if local changes in the install directory block the update. Your `config/default.yml` is not tracked by git, so updates never touch it. |
+| `--update` | Update zapz itself, then exit. A branch install is updated with `git pull --ff-only`; a release install (the default) moves to the newest release tag, and never to an older version than the one you have. Fails if local changes in the install directory block the update. Your `config/default.yml` is not tracked by git, so updates never touch it. |
 | `-v`, `--verbose` | Print debug messages too. Command output always goes to the log file. |
 | `--version` | Print the installed version and the project URL, then exit. |
 | `-h`, `--help` | Print usage and exit. |
@@ -103,7 +103,7 @@ zapz only runs on macOS 14 (Sonoma) or later, and warns below macOS 15, which
 is the oldest version Homebrew fully supports. It reads your config with
 [yq](https://github.com/mikefarah/yq); if a compatible `yq` isn't already on
 your `PATH`, zapz downloads a pinned, checksum-verified copy into
-`~/.local/share/zapz/bin`. You don't need to install it.
+the `bin` folder of your zapz install (`~/.local/share/zapz/bin` by default). You don't need to install it.
 
 See [Configuration]({{ site.baseurl }}/configuration/) for what each setting
 does.
