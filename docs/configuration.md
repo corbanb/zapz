@@ -43,9 +43,9 @@ git:
 
 node:
   versions:
+    - "lts/lithium"   # Node.js 26
     - "lts/krypton"   # Node.js 24
-    - "lts/jod"       # Node.js 22
-  default: "lts/krypton"
+  default: "lts/lithium"
   global_packages:
     - "pnpm"
     - "typescript"
@@ -125,7 +125,7 @@ step.
 
 | Key | Type | Effect |
 | --- | --- | --- |
-| `homebrew.taps` | list of strings | Added with `brew tap`, e.g. `"hashicorp/tap"`. |
+| `homebrew.taps` | list of strings | Added with `brew tap` and, on Homebrew 6 or later, trusted with `brew trust`, so formulas and casks from them load. Listing a tap here is the decision to trust it. e.g. `"hashicorp/tap"`. You don't need a tap for a fully qualified name like `oven-sh/bun/bun`. |
 | `homebrew.formulas` | list of strings | Installed with `brew install`. Tap-qualified names work and tap automatically, e.g. `"oven-sh/bun/bun"`. |
 | `homebrew.casks` | list of strings | Installed with `brew install --cask`. |
 

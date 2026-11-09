@@ -9,11 +9,9 @@ permalink: /docs/
 ## Requirements
 
 - macOS 12 (Monterey) or later
-- git, which comes with the Xcode Command Line Tools:
 
-  ```bash
-  xcode-select --install
-  ```
+On a new Mac, the installer first opens Apple's Command Line Tools dialog
+(which provides git); click **Install** and it continues once that finishes.
 
 zapz installs everything else it needs, including Homebrew and
 [yq](https://github.com/mikefarah/yq).

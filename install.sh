@@ -26,11 +26,29 @@ if [[ "$(uname)" != "Darwin" ]]; then
     exit 1
 fi
 
-# On a fresh Mac, /usr/bin/git is a stub that fails until the
-# Xcode Command Line Tools are installed
+# A fresh Mac has no git until the Xcode Command Line Tools are installed.
+# Start that install (Apple's dialog) and wait, so one command works on a
+# brand-new machine.
+if ! xcode-select -p >/dev/null 2>&1; then
+    print_info "Installing the Xcode Command Line Tools (needed for git)..."
+    xcode-select --install >/dev/null 2>&1 || true
+    print_info "Click Install in the dialog that opened. This can take several minutes."
+    waited=0
+    timeout="${ZAPZ_XCODE_TIMEOUT:-1800}"
+    until xcode-select -p >/dev/null 2>&1; do
+        if ((waited >= timeout)); then
+            print_error "The Xcode Command Line Tools still aren't installed"
+            print_info "Run 'xcode-select --install', finish the installer, then run this command again"
+            exit 1
+        fi
+        sleep 5
+        waited=$((waited + 5))
+    done
+fi
+
 if ! git --version >/dev/null 2>&1; then
-    print_error "git is required to install zapz"
-    print_info "Install the Xcode Command Line Tools first: xcode-select --install"
+    print_error "git is required to install zapz, but it isn't working"
+    print_info "Try reinstalling the Xcode Command Line Tools: xcode-select --install"
     exit 1
 fi
 

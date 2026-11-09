@@ -121,6 +121,35 @@ test_refuses_non_macos() {
     [[ "$out" == *"only works on macOS"* ]] || fail "$out"
 }
 
+# Like a fresh Mac: no Command Line Tools until the installer has run
+stub_missing_command_line_tools() {
+    stub xcode-select '
+case "$1" in
+    -p) [[ -f "$STUB_STATE/clt" ]] ;;
+    --install) touch "$STUB_STATE/clt" ;;
+esac'
+}
+
+test_installs_command_line_tools_first() {
+    setup_sandbox
+    stub_missing_command_line_tools
+    run_install > /dev/null
+    assert_contains "$STUB_LOG" "xcode-select --install"
+    assert_file "$HOME/.local/share/zapz/setup.sh"
+}
+
+test_gives_up_if_command_line_tools_never_install() {
+    setup_sandbox
+    stub uname 'echo Darwin'
+    stub xcode-select '[[ "$1" == "-p" ]] && exit 2; exit 0'
+    local out
+    if out=$(ZAPZ_XCODE_TIMEOUT=0 ZAPZ_SOURCE="$PROJECT_ROOT" "$BASH" "$PROJECT_ROOT/install.sh" 2>&1); then
+        fail "installed without the Command Line Tools"
+    fi
+    [[ "$out" == *"still aren't installed"* ]] || fail "$out"
+    assert_no_file "$HOME/.local/share/zapz/setup.sh"
+}
+
 section "install.sh"
 run_test "fresh install creates checkout, config, command and rc block" test_fresh_install
 run_test "reinstall keeps config and doesn't duplicate rc changes" test_reinstall_is_idempotent
@@ -129,5 +158,7 @@ run_test "bash users get ~/.bash_profile" test_bash_users_get_bash_profile
 run_test "refuses to install over an unrelated directory" test_refuses_non_zapz_directory
 run_test "tag installs can update and return to the default branch" test_ref_install_can_update
 run_test "refuses to run outside macOS" test_refuses_non_macos
+run_test "installs the Command Line Tools on a fresh Mac" test_installs_command_line_tools_first
+run_test "gives up if the Command Line Tools never install" test_gives_up_if_command_line_tools_never_install
 
 finish_tests

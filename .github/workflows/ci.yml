@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  YQ_VERSION: v4.53.6
+  YQ_VERSION: v4.54.2
 
 jobs:
   lint:

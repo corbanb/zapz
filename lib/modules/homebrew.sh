@@ -38,7 +38,12 @@ setup_homebrew() {
         [[ -n "$tap" ]] || continue
         if ! brew tap | grep -qx "$tap"; then
             log_debug "Adding tap: $tap"
-            brew tap "$tap" || failed+=("tap $tap")
+            brew tap "$tap" || { failed+=("tap $tap"); continue; }
+        fi
+        # Homebrew 6+ won't load formulas from a third-party tap until it is
+        # trusted. Listing a tap in your config is that decision.
+        if supports_tap_trust; then
+            brew trust "$tap" >/dev/null || failed+=("trust $tap")
         fi
     done < <(config_list '.homebrew.taps')
 

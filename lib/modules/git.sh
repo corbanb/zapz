@@ -17,11 +17,18 @@ setup_git() {
     fi
 
     # Only set values the config provides, so blank fields never
-    # clobber an identity the user already has
+    # clobber an identity the user already has. On a fresh Mac there is
+    # none yet, so ask when someone is at the keyboard.
     log_info "Configuring Git user settings..."
-    local key value
+    local key value label
     for key in user.name user.email; do
         value=$(config_get ".git.$key")
+        if [[ -z "$value" ]] && ! git config --global --get "$key" >/dev/null 2>&1 \
+                && [[ -t 0 ]]; then
+            label="name"
+            [[ "$key" == user.email ]] && label="email"
+            read -r -p "Your $label for git commits: " value || value=""
+        fi
         if [[ -n "$value" ]]; then
             git config --global "$key" "$value"
         elif ! git config --global --get "$key" >/dev/null 2>&1; then

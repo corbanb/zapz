@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-ZAPZ_NVM_VERSION="v0.40.8"
+ZAPZ_NVM_VERSION="v0.41.0"
 
 # nvm isn't safe under `set -eu`, so relax strict mode around nvm calls
 # and restore whatever the caller had afterwards.

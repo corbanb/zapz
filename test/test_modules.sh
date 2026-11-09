@@ -127,6 +127,7 @@ test_homebrew_installs_missing_packages() {
     assert_contains "$STUB_LOG" "brew install ripgrep"
     assert_contains "$STUB_LOG" "brew install --cask iterm2"
     assert_contains "$STUB_LOG" "brew tap example/tap"
+    assert_contains "$STUB_LOG" "brew trust example/tap"
     assert_not_contains "$STUB_LOG" "brew install jq"
     assert_not_contains "$STUB_LOG" "brew install --cask docker"
 }

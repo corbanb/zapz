@@ -22,12 +22,18 @@ The first version that installs and runs end to end on a fresh Mac.
   instead of an empty passphrase.
 - Git aliases are only added if you haven't defined them yourself.
 - Bun and Deno are installed through Homebrew formulas in the config.
-- The example config uses Node.js 24 and 22 and drops the retired
+- The example config uses Node.js 26 and 24 and drops the retired
   `homebrew/cask` and `homebrew/cask-fonts` taps.
 - `macos.developer_mode` must be enabled explicitly before zapz runs
   `DevToolsSecurity`.
 
 ### Added
+- The installer starts the Xcode Command Line Tools install itself on a
+  fresh Mac and waits for it, so the one-line install works on a new machine.
+- When run in a terminal with no git identity set, zapz asks for your name
+  and email.
+- Taps listed in `homebrew.taps` are trusted with `brew trust` (required
+  for third-party taps since Homebrew 6).
 - `git.config` for arbitrary `git config --global` options.
 - `macos.finder.*`, `macos.dock.minimize-to-application` and
   `macos.developer_mode` settings.

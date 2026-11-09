@@ -67,7 +67,7 @@ which is useful if you want to pin it.
 ## 3. Onboard a teammate
 
 ```bash
-# Install zapz (needs the Xcode Command Line Tools for git)
+# Install zapz (on a new Mac this first installs the Command Line Tools)
 curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | bash
 
 # Open a new terminal, then set up from the team config

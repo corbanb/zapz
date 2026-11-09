@@ -51,8 +51,9 @@ The example config also installs Bun, Deno, VS Code, iTerm2, Docker and
 ### Requirements
 
 - macOS 12 (Monterey) or later
-- git, which comes with the Xcode Command Line Tools
-  (`xcode-select --install`)
+
+On a new Mac, the installer first opens Apple's Command Line Tools dialog
+(which provides git); click **Install** and it continues once that finishes.
 
 zapz installs everything else it needs, including Homebrew and
 [yq](https://github.com/mikefarah/yq).
@@ -126,8 +127,8 @@ git:
     pull.rebase: "true"
 
 node:
-  versions: ["lts/krypton", "lts/jod"]
-  default: "lts/krypton"
+  versions: ["lts/lithium", "lts/krypton"]
+  default: "lts/lithium"
   global_packages: ["pnpm", "typescript"]
 
 homebrew:

@@ -23,9 +23,9 @@ git:
 
 node:
   versions:
+    - "lts/lithium"   # Node.js 26
     - "lts/krypton"   # Node.js 24
-    - "lts/jod"       # Node.js 22
-  default: "lts/krypton"
+  default: "lts/lithium"
   global_packages:
     - "pnpm"
     - "typescript"
@@ -61,7 +61,7 @@ Or save it as `~/.local/share/zapz/config/default.yml` and run `zapz`.
 
 ## What you get
 
-- nvm, with Node.js 24 and 22 installed and 24 as the default in new shells
+- nvm, with Node.js 26 and 24 installed and 26 as the default in new shells
 - `pnpm` and `typescript` installed globally for the default Node version
 - Bun (from the `oven-sh/bun` tap, which Homebrew adds automatically) and Deno
 - VS Code as your git editor

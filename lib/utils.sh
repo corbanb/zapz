@@ -194,6 +194,11 @@ is_app_installed() {
     brew list --cask "$1" >/dev/null 2>&1
 }
 
+# Homebrew 6 added `brew trust` (tap trust); older versions don't have it
+supports_tap_trust() {
+    brew trust --help >/dev/null 2>&1
+}
+
 # Check if a formula is already installed via Homebrew.
 # Works with tap-qualified names like oven-sh/bun/bun.
 is_formula_installed() {

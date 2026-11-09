@@ -19,9 +19,9 @@ git:
 # Node.js (installed with nvm)
 node:
   versions:
+    - "lts/lithium"   # Node.js 26
     - "lts/krypton"   # Node.js 24
-    - "lts/jod"       # Node.js 22
-  default: "lts/krypton"
+  default: "lts/lithium"
   global_packages:
     - "pnpm"
     - "typescript"
