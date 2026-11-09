@@ -306,6 +306,8 @@ test_ssh_generates_key_with_passphrase_prompt() {
     use_config <<< 'git: { user: { email: "ada@example.com" } }'
     setup_ssh
     assert_contains "$STUB_LOG" "ssh-keygen -t ed25519 -C ada@example.com"
+    assert_contains "$STUB_LOG" "ssh-add --apple-use-keychain"
+    assert_contains "$HOME/.ssh/config" "IgnoreUnknown UseKeychain"
     assert_not_contains "$STUB_LOG" "-N"
     assert_contains "$HOME/.ssh/config" "Host github.com"
 }

@@ -37,7 +37,7 @@ homebrew:
     - "terraform"
   casks:
     - "visual-studio-code"
-    - "docker"
+    - "docker-desktop"
     - "slack"
 
 cron:

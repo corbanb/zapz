@@ -63,7 +63,7 @@ homebrew:
   casks:
     - "visual-studio-code"
     - "iterm2"
-    - "docker"
+    - "docker-desktop"
 ```
 
 If a cask fails because the app was already installed by hand, zapz reports it

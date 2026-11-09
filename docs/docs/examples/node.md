@@ -41,7 +41,7 @@ homebrew:
   casks:
     - "visual-studio-code"
     - "iterm2"
-    - "docker"
+    - "docker-desktop"
 
 cron:
   update_schedule:

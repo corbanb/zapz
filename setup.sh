@@ -184,6 +184,9 @@ check_platform() {
         log_error "zapz needs macOS ${ZAPZ_MIN_MACOS_VERSION} or later (found ${macos_version})"
         exit 1
     fi
+    if version_gt "$ZAPZ_RECOMMENDED_MACOS_VERSION" "$macos_version"; then
+        log_warning "Homebrew only fully supports macOS ${ZAPZ_RECOMMENDED_MACOS_VERSION} and later; some packages may need to build from source"
+    fi
 }
 
 cleanup() {

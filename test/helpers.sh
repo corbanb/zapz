@@ -109,6 +109,8 @@ setup_sandbox() {
     export PATH="$STUB_BIN:$REAL_PATH"
     export GIT_CONFIG_NOSYSTEM=1
     export SHELL=/bin/zsh
+    # Apple's /usr/bin/ssh-add is preferred over PATH; use the stub instead
+    export ZAPZ_SSH_ADD="$STUB_BIN/ssh-add"
     unset XDG_CONFIG_HOME XDG_CACHE_HOME NVM_DIR ZAPZ_HOME ZAPZ_DISABLE_UPDATE_CHECK
     trap 'rm -rf "$SANDBOX"' EXIT
 

@@ -22,6 +22,8 @@ The first version that installs and runs end to end on a fresh Mac.
   instead of an empty passphrase.
 - Git aliases are only added if you haven't defined them yourself.
 - Bun and Deno are installed through Homebrew formulas in the config.
+- The example config installs `docker-desktop` (Homebrew renamed the
+  `docker` cask).
 - The example config uses Node.js 26 and 24 and drops the retired
   `homebrew/cask` and `homebrew/cask-fonts` taps.
 - `macos.developer_mode` must be enabled explicitly before zapz runs
@@ -37,7 +39,7 @@ The first version that installs and runs end to end on a fresh Mac.
 - `git.config` for arbitrary `git config --global` options.
 - `macos.finder.*`, `macos.dock.minimize-to-application` and
   `macos.developer_mode` settings.
-- macOS version check (12 or later).
+- macOS version check: 14 or later required, with a warning below 15.
 - Behavioral test suite, run in CI on Ubuntu and macOS (bash 3.2).
 
 ### Fixed
@@ -65,9 +67,14 @@ The first version that installs and runs end to end on a fresh Mac.
 - The old cron job is removed when you run setup, so updates don't run twice.
 - Setup gives up with a message if the Xcode Command Line Tools installer
   never finishes, instead of waiting forever.
+- SSH setup works when Homebrew's openssh comes first on PATH: zapz calls
+  Apple's `/usr/bin/ssh-add` for `--apple-use-keychain`, and generated SSH
+  configs include `IgnoreUnknown UseKeychain` so non-Apple ssh accepts them.
 
 ### Removed
 - `--force`, which had no effect.
+- Support for macOS 12 and 13. zapz now needs macOS 14 or later and warns
+  below 15, the oldest version Homebrew fully supports.
 - `cron.terminal_update`, `cli.alias`, `cli.auto_alias` and
   `cli.update_notifications`, which were never implemented. Use
   `ZAPZ_DISABLE_UPDATE_CHECK=1` to turn off the update notice.

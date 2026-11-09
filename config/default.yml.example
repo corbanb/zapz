@@ -42,7 +42,7 @@ homebrew:
   casks:
     - "visual-studio-code"
     - "iterm2"
-    - "docker"
+    - "docker-desktop"
     - "1password"
 
 # macOS preferences (omit a key to leave that setting alone)

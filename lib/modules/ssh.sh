@@ -22,8 +22,12 @@ setup_ssh() {
         # No -N: prompt for a passphrase rather than creating an unprotected key
         ssh-keygen -t ed25519 -C "$key_comment" -f "$ssh_key"
 
-        # macOS already runs an ssh-agent; store the passphrase in the Keychain
-        ssh-add --apple-use-keychain "$ssh_key" || log_warning "Could not add key to the ssh-agent"
+        # macOS already runs an ssh-agent; store the passphrase in the
+        # Keychain. Only Apple's ssh-add has --apple-use-keychain, so don't
+        # pick up Homebrew's openssh from PATH.
+        local ssh_add="${ZAPZ_SSH_ADD:-/usr/bin/ssh-add}"
+        [[ -x "$ssh_add" ]] || ssh_add=ssh-add
+        "$ssh_add" --apple-use-keychain "$ssh_key" || log_warning "Could not add key to the ssh-agent"
     else
         log_success "SSH key already exists"
     fi
@@ -32,6 +36,9 @@ setup_ssh() {
     if [[ ! -f "$ssh_config" ]]; then
         log_info "Creating SSH config..."
         cat > "$ssh_config" << EOF
+# UseKeychain is Apple-only; let other ssh builds (e.g. Homebrew's) skip it
+IgnoreUnknown UseKeychain
+
 # GitHub
 Host github.com
     AddKeysToAgent yes
@@ -53,6 +60,9 @@ EOF
         local tmp
         tmp=$(mktemp)
         cat > "$tmp" << EOF
+# UseKeychain is Apple-only; let other ssh builds (e.g. Homebrew's) skip it
+IgnoreUnknown UseKeychain
+
 # GitHub (added by zapz)
 Host github.com
     AddKeysToAgent yes

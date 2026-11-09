@@ -7,7 +7,7 @@ Set up a Mac for development with one command, from one YAML file.
 [![Version](https://img.shields.io/github/v/release/corbanb/zapz?include_prereleases&label=version)](https://github.com/corbanb/zapz/releases)
 [![CI](https://github.com/corbanb/zapz/actions/workflows/ci.yml/badge.svg)](https://github.com/corbanb/zapz/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![macOS](https://img.shields.io/badge/macOS-12%2B-brightgreen)](#requirements)
+[![macOS](https://img.shields.io/badge/macOS-14%2B-brightgreen)](#requirements)
 
 [📖 Documentation](https://corbanb.github.io/zapz) | [🚀 Quick Start](#-quick-start) | [⚙️ Configuration](#%EF%B8%8F-configuration)
 
@@ -50,7 +50,8 @@ The example config also installs Bun, Deno, VS Code, iTerm2, Docker and
 
 ### Requirements
 
-- macOS 12 (Monterey) or later
+- macOS 14 (Sonoma) or later. macOS 15 or later is recommended, since that's
+  what Homebrew fully supports. Tested on macOS 15, 26 and 27.
 
 On a new Mac, the installer first opens Apple's Command Line Tools dialog
 (which provides git); click **Install** and it continues once that finishes.

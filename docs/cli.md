@@ -70,7 +70,7 @@ Steps run in this order. Each one skips work that is already done, so running
 7. **Scheduled updates.** Installs or removes a launchd agent that keeps
    packages updated. Skipped with `--skip-schedule`.
 
-zapz only runs on macOS 12 (Monterey) or later.
+zapz only runs on macOS 14 (Sonoma) or later, and warns below macOS 15, which is the oldest version Homebrew fully supports.
 
 See [Configuration]({{ site.baseurl }}/configuration/) for what each setting
 does.

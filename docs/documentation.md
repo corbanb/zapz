@@ -8,7 +8,7 @@ permalink: /docs/
 
 ## Requirements
 
-- macOS 12 (Monterey) or later
+- macOS 14 (Sonoma) or later; 15 or later recommended (what Homebrew fully supports)
 
 On a new Mac, the installer first opens Apple's Command Line Tools dialog
 (which provides git); click **Install** and it continues once that finishes.

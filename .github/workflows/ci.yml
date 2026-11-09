@@ -37,7 +37,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # macos-latest is macOS 26; xcode-27 is GitHub's macOS 27 image
+        os: [ubuntu-latest, macos-15, macos-latest, xcode-27]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

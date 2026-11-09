@@ -9,8 +9,15 @@ setup_homebrew() {
     fi
 
     if ! command_exists brew; then
-        log_info "Installing Homebrew..."
-        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        log_info "Installing Homebrew (it will ask for your password)..."
+        local homebrew_installer
+        homebrew_installer="$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        if [[ -t 0 ]]; then
+            /bin/bash -c "$homebrew_installer"
+        else
+            # No one to press Return or type a password (e.g. CI)
+            NONINTERACTIVE=1 /bin/bash -c "$homebrew_installer"
+        fi
         if ! load_brew_shellenv; then
             log_error "Homebrew installation failed"
             exit 1
