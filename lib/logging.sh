@@ -105,25 +105,26 @@ add_next_step() {
 
 # Something only the user can do, with an optional link to open or command
 # to run. Shown as a numbered checklist at the end.
-# Usage: add_checklist <title> [url] [command]
+# Usage: add_checklist <title> [url] [command] [note]
 ZAPZ_CHECKLIST=()
 add_checklist() {
     local entry
     for entry in ${ZAPZ_CHECKLIST[@]+"${ZAPZ_CHECKLIST[@]}"}; do
         [[ "${entry%%|*}" != "$1" ]] || return 0
     done
-    ZAPZ_CHECKLIST+=("$1|${2:-}|${3:-}")
+    ZAPZ_CHECKLIST+=("$1|${2:-}|${3:-}|${4:-}")
 }
 
 # The checklist, then an offer to open its links
 ui_checklist() {
     ((${#ZAPZ_CHECKLIST[@]} > 0)) || return 0
-    local entry title url cmd i=0 links=0
+    local entry title url cmd note i=0 links=0
     printf "\n  ${BOLD}Things only you can do${NC}\n"
     for entry in "${ZAPZ_CHECKLIST[@]}"; do
-        IFS='|' read -r title url cmd <<< "$entry"
+        IFS='|' read -r title url cmd note <<< "$entry"
         i=$((i + 1))
         printf "  %2d  %s\n" "$i" "$title"
+        [[ -z "$note" ]] || printf "      ${DIM}%s${NC}\n" "$note"
         [[ -z "$cmd" ]] || printf "      ${DIM}run:${NC} %s\n" "$cmd"
         [[ -z "$url" ]] || links=$((links + 1))
     done
@@ -131,7 +132,7 @@ ui_checklist() {
         printf "\n"
         if confirm "  Open the $links link(s) now?" Y; then
             for entry in "${ZAPZ_CHECKLIST[@]}"; do
-                IFS='|' read -r title url cmd <<< "$entry"
+                IFS='|' read -r title url cmd note <<< "$entry"
                 [[ -z "$url" ]] || open "$url" >/dev/null 2>&1 || true
             done
         fi

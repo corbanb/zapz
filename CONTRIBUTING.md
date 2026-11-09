@@ -24,13 +24,23 @@ lib/
   logging.sh              Output: step headers, result lines, run_quiet, the summary
   plan.sh                 The preview shown before anything changes (read-only)
   configure.sh            The setup wizard (install.sh and `zapz --configure`)
+  catalog.sh              Reads catalog/ and turns the wizard's picks into config entries
   version.sh
   check_update.sh         Update notice sourced from users' shells (must work in zsh and bash)
   maintenance.sh          Run by launchd for scheduled updates
-  modules/*.sh            One setup step each: xcode, git, ssh (and GitHub), homebrew, node, macos, schedule
+  modules/*.sh            One setup step each: xcode, security, git, ssh (and GitHub), homebrew,
+                          languages (mise), node (older nvm configs), terminal (and shell),
+                          appstore, macos, schedule
+catalog/
+  README.md               The file format and item kinds
+  base.yml                What every wizard-written config starts from
+  essentials.yml          What every Mac gets
+  personas/*.yml          The "What will you use this Mac for?" choices
+  packs/*.yml             The optional extras
 config/
   default.yml.example     Every option, documented
-  presets/*.yml           What the wizard starts from: essentials, webdev, minimal
+scripts/
+  check-catalog.sh        Checks every Homebrew name in catalog/ still exists (weekly in CI)
 test/
 ```
 
@@ -49,8 +59,8 @@ bash test/test_modules.sh    # one suite
   `ZAPZ_SOURCE` to the checkout so the installer copies it instead of
   cloning from GitHub.
 - `test/test_experience.sh`: the first-run experience end to end: the preview
-  and confirmation (`--dry-run`, `--yes`, no terminal), the wizard and presets,
-  backups, the pinned yq download, and the output layer (summary counts, exit
+  and confirmation (`--dry-run`, `--yes`, no terminal), the wizard (with
+  scripted answers) and catalog validity, backups, the pinned yq download, and the output layer (summary counts, exit
   status, `NO_COLOR`).
 
 Tests use a temporary `HOME` and stub commands such as `brew`, `defaults`,
@@ -60,8 +70,30 @@ system, and they run on Linux too.
 When you change a module, add a test to `test/test_modules.sh` that runs the
 module and checks the result. Where it matters, run it twice and check that
 the second run changes nothing and reports "already set". If you change what
-a step does, update the preview in `lib/plan.sh` to match, and the presets and
-`config/default.yml.example` if you add a config option.
+a step does, update the preview in `lib/plan.sh` to match. If you add a config
+option, document it in `config/default.yml.example` and, if the wizard should
+set it, `catalog/base.yml` or `lib/configure.sh`.
+
+## Adding to the catalog
+
+The wizard's personas, extras and their questions live in `catalog/`, so most
+"please add app X" changes are YAML only. See
+[`catalog/README.md`](catalog/README.md) for the format.
+
+- **An item:** add it to a persona's or pack's `core` (always installed) or to
+  one of its `picks` questions. Use the right `kind`: `formula` or `cask` for
+  Homebrew, `mise` for languages, `mas` for App Store apps (with its `id`),
+  `guided` for downloads zapz can't install (with a `url`), or `command` for
+  something the user runs (with `run`). Give it a `label` and a short `note`,
+  add `then` for a follow-up the user must do (like signing in), and mark at
+  most a few `recommended: true`.
+- **A persona or pack:** add a file to `catalog/personas/` or `catalog/packs/`
+  with a unique `id` that matches the file name, a `title`, a one-line
+  `tagline` and an `order`.
+- Check every Homebrew name exists: `./scripts/check-catalog.sh` (needs
+  network access). The `Catalog` workflow runs it on catalog changes and
+  weekly, and fails if a name is missing or disabled.
+- Update `docs/docs/personas/index.md`, which lists every item.
 
 ## Code guidelines
 
@@ -76,7 +108,8 @@ a step does, update the preview in `lib/plan.sh` to match, and the presets and
 - **Output.** Report results with the helpers in `lib/logging.sh` rather
   than printing your own lines:
   - `log_header "Title"` once at the start of a step (prints e.g.
-    `[3/8] SSH key`).
+    `[3/10] SSH key`). The steps that run depend on the config, so the total
+    varies; add a new step to the list in `main` in `setup.sh`.
   - `ui_item <state> <label> [detail]` for one result line, where state is
     `changed`, `existing` (already set), `skipped` or `failed`. These feed the
     summary counts, and `failed` items are listed under "Problems" and make
@@ -85,8 +118,11 @@ a step does, update the preview in `lib/plan.sh` to match, and the presets and
     command: it shows a spinner, sends the output to the log, prints one
     result line, and shows the end of the output only if it fails. With
     `--housekeeping`, success isn't counted as a change (e.g. `brew update`).
-  - `add_next_step "..."` for something the user has to do after the run; it
-    appears under "Next" in the summary.
+  - `add_checklist "title" [url] [command]` for something only the user can
+    do (a sign-in, a download, a command to run). It appears in the numbered
+    "Things only you can do" list at the end, which offers to open the links.
+  - `add_next_step "..."` for a general next step; it appears under "Next" in
+    the summary.
 - **Questions up front.** Setup asks everything (confirmation, git identity,
   password) before the steps start. Don't add prompts in the middle of a
   module; if one is unavoidable, read from `$ZAPZ_PROMPT_FD` and handle there

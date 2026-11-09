@@ -69,7 +69,8 @@ test_yes_runs_everything_and_summarizes() {
     local out
     out=$(ZAPZ_NONINTERACTIVE=1 zapz --yes 2>&1)
     [[ "$out" == *"[1/"*"] Command Line Tools"* ]] || fail "no step headers: $out"
-    [[ "$out" == *"] Security"* ]] || fail "no security step: $out"
+    # No security section: security settings must not be touched
+    [[ "$out" != *"] Security"* ]] || fail "security ran without being turned on: $out"
     [[ "$out" == *"✓ Your Mac is ready"* ]] || fail "no summary: $out"
     [[ "$out" == *"Full log:"* ]] || fail "no log path: $out"
     assert_contains "$STUB_LOG" "brew install ripgrep"

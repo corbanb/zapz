@@ -6,11 +6,11 @@ description: Example Node.js development environment
 permalink: /docs/examples/node/
 ---
 
-A config for JavaScript and TypeScript work: two Node versions through nvm,
-global packages, Bun and Deno, and the usual command-line tools. It's close to
-the **Web development** preset
-([`config/presets/webdev.yml`](https://github.com/corbanb/zapz/blob/main/config/presets/webdev.yml)),
-which the setup wizard offers by default.
+A config for JavaScript and TypeScript work: Node.js, Bun, Deno, pnpm and
+TypeScript through [mise](https://mise.jdx.dev), the usual command-line
+tools, Ghostty and the recommended shell. It's close to what the setup wizard
+writes when you pick **Software development** (see
+[Personas and Extras]({{ site.baseurl }}/docs/personas/#software-development)).
 
 ## Config
 
@@ -24,27 +24,35 @@ git:
   config:
     pull.rebase: "true"
 
-node:
-  versions:
-    - "lts/lithium"   # Node.js 26
-    - "lts/krypton"   # Node.js 24
-  default: "lts/lithium"
-  global_packages:
-    - "pnpm"
-    - "typescript"
-
 homebrew:
   formulas:
     - "gh"
     - "jq"
     - "ripgrep"
     - "fd"
-    - "oven-sh/bun/bun"
-    - "deno"
+    - "mise"
+    - "starship"
+    - "zsh-autosuggestions"
+    - "zsh-syntax-highlighting"
   casks:
     - "visual-studio-code"
-    - "iterm2"
-    - "docker-desktop"
+    - "ghostty"
+    - "orbstack"
+    - "font-jetbrains-mono-nerd-font"
+
+languages:
+  tools:
+    - "node@lts"
+    - "bun@latest"
+    - "deno@latest"
+    - "pnpm@latest"
+    - "npm:typescript"
+
+terminal:
+  app: "ghostty"
+
+shell:
+  setup: "recommended"
 
 cron:
   update_schedule:
@@ -65,25 +73,45 @@ Or save it as `~/.local/share/zapz/config/default.yml` and run `zapz`.
 
 ## What you get
 
-- nvm, with Node.js 26 and 24 installed and 26 as the default in new shells
-- `pnpm` and `typescript` installed globally for the default Node version
-- Bun (from the `oven-sh/bun` tap, which Homebrew adds automatically) and Deno
-- VS Code as your git editor
-- a weekly job that runs `brew upgrade` and `npm update -g`
+- mise, with Node.js LTS, Bun, Deno and pnpm as your global versions, and
+  TypeScript (`tsc`) installed through mise's npm backend
+- a `mise activate` line in your shell, so new terminals use those versions
+- OrbStack for containers, and VS Code as your git editor
+- Ghostty with the JetBrains Mono Nerd Font, and the recommended shell (Oh My
+  Zsh, autosuggestions, syntax highlighting, the Starship prompt)
+- a weekly job that runs `brew upgrade` and `mise upgrade`
+- Touch ID for `sudo`, the firewall and a FileVault check, since `security`
+  is on unless you turn it off
 
 ## Variations
 
-Pin exact versions instead of LTS names:
+Pin an exact version instead of `lts`:
+
+```yaml
+languages:
+  tools:
+    - "node@22.11.0"
+```
+
+Use a different version in one project with mise, which writes a `mise.toml`
+in that folder:
+
+```bash
+cd my-project
+mise use node@20
+```
+
+### Older configs: nvm
+
+Configs written before mise support use a `node` section, which still works.
+zapz installs nvm, your Node versions and global npm packages:
 
 ```yaml
 node:
-  versions: ["22.11.0", "20.18.0"]
-  default: "22.11.0"
+  versions: ["lts/lithium", "lts/krypton"]   # Node.js 26 and 24
+  default: "lts/lithium"
+  global_packages: ["pnpm", "typescript"]
 ```
 
-Global packages are installed for whichever version `node.default` points to.
-To switch versions in a shell, use nvm as usual:
-
-```bash
-nvm use 20.18.0
-```
+New configs should use `languages.tools` instead. See
+[node (older configs)]({{ site.baseurl }}/configuration/#node-older-configs).

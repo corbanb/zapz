@@ -11,9 +11,10 @@ New teammates get the same tools with one command.
 
 ## 1. Write the team config
 
-Start from a preset if it helps (see
-[Presets]({{ site.baseurl }}/configuration/#presets)). Leave `git.user` out so
-zapz keeps each person's own git identity:
+If it helps, run `zapz --configure` with the personas your team uses (for
+example Software development and Team collaboration; see
+[Personas and Extras]({{ site.baseurl }}/docs/personas/)) and trim the config it
+writes. Leave `git.user` out so zapz keeps each person's own git identity:
 
 ```yaml
 git:
@@ -21,13 +22,6 @@ git:
   config:
     pull.rebase: "true"
     push.autoSetupRemote: "true"
-
-node:
-  versions:
-    - "lts/jod"
-  default: "lts/jod"
-  global_packages:
-    - "pnpm"
 
 homebrew:
   taps: []
@@ -37,10 +31,16 @@ homebrew:
     - "jq"
     - "awscli"
     - "terraform"
+    - "mise"
   casks:
     - "visual-studio-code"
     - "docker-desktop"
     - "slack"
+
+languages:
+  tools:
+    - "node@22"
+    - "pnpm@latest"
 
 cron:
   update_schedule:
@@ -51,7 +51,20 @@ cron:
 ```
 
 There is no `macos` section, so zapz leaves everyone's Dock, keyboard and
-Finder settings alone.
+Finder settings alone, and no `terminal` or `shell` section, so it leaves
+their terminal and shell alone too. With no `security` section, Touch ID for
+`sudo`, the firewall and the FileVault check are on; add a `security` section
+with `false` values if your team manages those another way.
+
+Things people have to do themselves, such as signing in to a company tool,
+can go in a `checklist`. zapz shows them at the end of setup:
+
+```yaml
+checklist:
+  - title: "Sign in to Slack"
+  - title: "Request access to the AWS console"
+    url: "https://example.com/aws-access"
+```
 
 ## 2. Publish it as a gist
 

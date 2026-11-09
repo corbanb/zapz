@@ -330,7 +330,12 @@ main() {
     local start=$SECONDS
 
     # The steps that apply to this config, in order
-    local steps=(install_xcode_tools setup_security setup_git setup_ssh setup_homebrew)
+    local steps=(install_xcode_tools)
+    if config_enabled '.security.touch_id_sudo' || config_enabled '.security.firewall' \
+            || config_enabled '.security.filevault_check'; then
+        steps+=(setup_security)
+    fi
+    steps+=(setup_git setup_ssh setup_homebrew)
     [[ -z "$(config_list '.languages.tools')" ]] || steps+=(setup_languages)
     # Older configs set Node.js up with nvm (node.versions)
     [[ -z "$(config_list '.node.versions')" ]] || steps+=(setup_node)
@@ -342,11 +347,11 @@ main() {
     ZAPZ_STEP_TOTAL=${#steps[@]}
 
     # Things from the config only the user can do (downloads, sign-ins)
-    local title url cmd
-    while IFS=$'\t' read -r title url cmd; do
+    local title url cmd note
+    while IFS=$'\t' read -r title url cmd note; do
         [[ -n "$title" ]] || continue
-        add_checklist "$title" "${url#-}" "${cmd#-}"
-    done < <(yq e '(.checklist // [])[] | [.title, (.url // "-"), (.command // "-")] | @tsv' "$CONFIG_FILE")
+        add_checklist "$title" "${url#-}" "${cmd#-}" "${note#-}"
+    done < <(yq e '(.checklist // [])[] | [.title, (.url // "-"), (.command // "-"), (.note // "-")] | @tsv' "$CONFIG_FILE")
 
     local step
     for step in "${steps[@]}"; do

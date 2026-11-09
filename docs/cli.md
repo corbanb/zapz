@@ -37,7 +37,7 @@ Options:
 | *(none)* | Preview and, once you confirm, run the full setup using `~/.local/share/zapz/config/default.yml`. If that file is missing, it is created from `config/default.yml.example` first. |
 | `-n`, `--dry-run` | Show the preview ("Here's what zapz will do") and exit. Nothing on your Mac is changed. |
 | `-y`, `--yes` | Don't ask "Continue?" after the preview. Required when there is no terminal to answer from (scripts, CI). |
-| `--configure` | Run the setup wizard again: it asks your name, email, which preset to start from, and whether to apply macOS settings and scheduled updates, then rewrites `config/default.yml` and exits. If you already have a config, it asks before replacing it and saves a copy to `~/.local/state/zapz/backups/<date-time>/` first. Needs a terminal. |
+| `--configure` | Run the setup wizard again: it asks your name and email, what you'll use the Mac for (personas), extras, a few follow-up picks, your terminal and shell, and whether to apply macOS settings and scheduled updates, then rewrites `config/default.yml` and exits. If you already have a config, it asks before replacing it and saves a copy to `~/.local/state/zapz/backups/<date-time>/` first. Needs a terminal. |
 | `-c`, `--config FILE` | Use `FILE` instead of the default config. zapz exits with an error if the file doesn't exist. |
 | `-g`, `--gist URL` | Download the config from `URL` and use it for this run. The URL must use `https`. Use the gist's **Raw** URL, for example `https://gist.githubusercontent.com/USER/ID/raw/config.yml`. The download goes to a private temp file that is deleted when zapz exits. If you pass both `-c` and `-g`, the gist is used. |
 | `--skip-macos` | Skip the macOS settings step (Dock, keyboard, Finder, Developer Mode). |
@@ -55,43 +55,65 @@ value, prints an error and the usage text and exits with status 1.
 
 1. **Banner and preview.** zapz prints its version, your macOS version and
    chip, then "Here's what zapz will do": what will be installed or changed,
-   and what you already have. With `--dry-run` it stops here.
+   and what you already have, a "You'll need to:" list of things only you
+   can do, and a rough time estimate. With `--dry-run` it stops here.
 2. **Confirmation.** It asks `Continue? [Y/n]`. Answer `n` and nothing is
    changed. `--yes` skips the question; without a terminal, zapz exits with an
    error unless you pass `--yes`.
 3. **Questions up front.** If neither your config nor git has your name or
-   email, zapz asks for them now. If Homebrew, apps or Developer Mode need it,
-   it asks for your password once and keeps `sudo` fresh for the rest of the
-   run, so the long part doesn't stop to ask again.
-4. **Steps.** They run in this order. Each one compares your config with what
-   is already on the Mac, so anything already installed or set is reported as
-   "already set" and left alone, and running `zapz` again is safe.
+   email, zapz asks for them now. If Homebrew, apps, the security settings or
+   Developer Mode need it, it asks for your password once and keeps `sudo`
+   fresh for the rest of the run, so the long part doesn't stop to ask again.
+4. **Steps.** Only the steps that apply to your config run, in this order, and
+   the step headers count them (e.g. `[3/10]`). Each one compares your config
+   with what is already on the Mac, so anything already installed or set is
+   reported as "already set" and left alone, and running `zapz` again is safe.
    1. **Command Line Tools.** Opens Apple's installer dialog if they're missing
       and waits for it to finish.
-   2. **Git.** Applies your `git` settings and adds a few aliases (`co`, `br`,
+   2. **Security.** Turns on Touch ID for `sudo` and the macOS firewall, and
+      checks FileVault. FileVault is never turned on for you; if it's off, it's
+      added to the checklist. Each part can be turned off in the `security`
+      section.
+   3. **Git.** Applies your `git` settings and adds a few aliases (`co`, `br`,
       `ci`, `st`, `unstage`, `last`) and `color.ui auto`, but only where you
       haven't set those already.
-   3. **SSH key.** Creates an ed25519 key at `~/.ssh/id_ed25519` if you don't
+   4. **SSH key.** Creates an ed25519 key at `~/.ssh/id_ed25519` if you don't
       have one. It asks for a passphrase and stores it in your Keychain. Adds a
       `github.com` entry to `~/.ssh/config`.
-   4. **Homebrew.** Installs Homebrew if needed, adds its `shellenv` to
+   5. **Homebrew.** Installs Homebrew if needed, adds its `shellenv` to
       `~/.zprofile` (`~/.bash_profile` for bash), runs `brew update`, then
       installs your taps, formulas and casks. A package that fails is listed in
       the summary and setup carries on.
-   5. **Node.js.** Installs nvm if needed, then your Node versions, your
-      default version and your global npm packages. Skipped when
-      `node.versions` is empty or missing.
-   6. **macOS settings.** Writes the settings from your `macos` section, and
-      restarts the Dock, Finder and SystemUIServer if anything changed.
-      Skipped with `--skip-macos`.
-   7. **Scheduled updates.** Installs or removes a launchd agent that keeps
-      packages updated. Skipped with `--skip-schedule`.
-   8. **GitHub.** If `gh` is installed and you're not signed in, offers to sign
-      in with the GitHub CLI in your browser, which can upload your new SSH
-      key. Otherwise the summary says how to add the key yourself.
-5. **Summary.** How many items changed and how many were already set, any
-   problems, next steps, the path of the full log and, if zapz edited any
-   files, where it backed them up.
+   6. **Languages.** Installs each tool in `languages.tools` with
+      [mise](https://mise.jdx.dev) (`mise use --global`), and adds `mise
+      activate` to your shell. Only when `languages.tools` has entries.
+   7. **Node.js** (older configs). Installs nvm if needed, then your Node
+      versions, your default version and your global npm packages. Only when
+      `node.versions` has entries.
+   8. **Terminal & shell.** Sets the font and spacing for Ghostty (or adds a
+      checklist item to set the font in iTerm2, Warp or Terminal), then applies
+      your `shell.setup`: Oh My Zsh, autosuggestions, syntax highlighting and
+      the Starship prompt (`recommended`), Starship only (`light`), or nothing
+      (`none`).
+   9. **App Store.** Installs `apps.app_store` apps with `mas`. An app that
+      can't install (not signed in, or not bought) is added to the checklist
+      instead of failing. Only when `apps.app_store` has entries.
+   10. **macOS settings.** Writes the settings from your `macos` section,
+       including the screenshots folder, and restarts the Dock, Finder and
+       SystemUIServer if anything changed. Skipped with `--skip-macos`.
+   11. **Scheduled updates.** Installs or removes a launchd agent that keeps
+       Homebrew packages, mise languages and App Store apps updated. Skipped
+       with `--skip-schedule`.
+   12. **GitHub.** If `gh` is installed and you're not signed in, offers to
+       sign in with the GitHub CLI in your browser, which can upload your new
+       SSH key. Otherwise the checklist says how to add the key yourself.
+5. **Summary.** "Your Mac is ready ⚡" (or the number of problems), how many
+   items changed and how many were already set, and any problems. Then
+   **Things only you can do**: a numbered checklist of downloads, sign-ins
+   and commands from your config's `checklist` and from the run (for example
+   turning on FileVault or getting an App Store app), with an offer to open
+   its links. Then next steps, the path of the full log and, if zapz edited
+   any files, where it backed them up.
 6. **Notification.** A macOS notification when a run that took more than a
    minute finishes, or when anything failed.
 
@@ -124,7 +146,7 @@ zapz
 # Preview only; change nothing
 zapz --dry-run
 
-# Re-run the setup wizard to start from a different preset
+# Re-run the setup wizard to pick different personas
 zapz --configure
 
 # Run without asking for confirmation (scripts, CI)

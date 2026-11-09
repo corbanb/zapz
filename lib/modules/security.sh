@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 # Safer defaults: Touch ID for sudo, the firewall on, and a FileVault check.
+# Each runs only when the config turns it on (the setup wizard does), so a
+# config without a security section never changes these settings.
 # zapz never turns FileVault on itself (it shows a recovery key you must
 # save), so it adds a checklist item instead.
 
@@ -21,14 +23,14 @@ filevault_on() {
 
 # Succeeds if a security setting needs the password to change
 security_needs_admin() {
-    { config_enabled '.security.touch_id_sudo' true && ! touch_id_sudo_enabled; } \
-        || { config_enabled '.security.firewall' true && ! firewall_enabled; }
+    { config_enabled '.security.touch_id_sudo' && ! touch_id_sudo_enabled; } \
+        || { config_enabled '.security.firewall' && ! firewall_enabled; }
 }
 
 setup_security() {
     log_header "Security"
 
-    if config_enabled '.security.touch_id_sudo' true; then
+    if config_enabled '.security.touch_id_sudo'; then
         if touch_id_sudo_enabled; then
             ui_item existing "Touch ID for sudo" "on"
         # sudo_local survives macOS updates (unlike editing pam.d/sudo)
@@ -39,7 +41,7 @@ setup_security() {
         fi
     fi
 
-    if config_enabled '.security.firewall' true; then
+    if config_enabled '.security.firewall'; then
         if firewall_enabled; then
             ui_item existing "Firewall" "on"
         elif sudo "$ZAPZ_SOCKETFILTERFW" --setglobalstate on >/dev/null 2>&1; then
@@ -49,7 +51,7 @@ setup_security() {
         fi
     fi
 
-    if config_enabled '.security.filevault_check' true; then
+    if config_enabled '.security.filevault_check'; then
         if filevault_on; then
             ui_item existing "FileVault" "on"
         else

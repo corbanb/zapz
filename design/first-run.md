@@ -41,7 +41,7 @@ plan screen says which:
 | **Homebrew** | `figma`, `ffmpeg` | Installs it |
 | **App Store** | Final Cut Pro | Installs with `mas` if you're signed in and own it; otherwise opens the App Store page and adds a checklist item |
 | **Guided download** | Edits, DaVinci Resolve, Premiere Pro | Opens the download page at the end; checklist item |
-| **Setup command** | Paperclip (`npx paperclipai@latest onboard --yes`) | Runs it after its dependencies (Node via mise) are installed |
+| **Command** | Paperclip (`npx paperclipai@latest onboard --yes`) | Shows it on the checklist to run when you're ready (some start a server or ask for sign-in, so zapz doesn't run them for you) |
 
 ## Essentials (everyone)
 
@@ -234,7 +234,7 @@ Same as persona 9, for people who pick it as an extra rather than a role.
 | Premiere Pro | Installed through Creative Cloud | Installs Creative Cloud; checklist: sign in, install Premiere |
 | Xcode | Needs an Apple ID | `xcodes` asks you to sign in; checklist item if skipped |
 | Aseprite | Paid on Steam / itch.io | Opens the store page; checklist item |
-| Paperclip | A Node app, set up by command | Runs its onboarding after Node is installed |
+| Paperclip | A Node app, set up by command | Shows the onboarding command on the checklist |
 | Licenses and sign-ins (1Password, Adobe, OrbStack, Warp, Wispr Flow) | Need you | Listed on the finish screen; each opens the app |
 
 ## The flow and its copy (draft)

@@ -99,13 +99,13 @@ show_plan() {
     _plan_row "Tools" "Command Line Tools: $text"
 
     local security=()
-    if config_enabled '.security.touch_id_sudo' true; then
+    if config_enabled '.security.touch_id_sudo'; then
         if touch_id_sudo_enabled; then security+=("Touch ID for sudo (on)"); else security+=("turn on Touch ID for sudo"); fi
     fi
-    if config_enabled '.security.firewall' true; then
+    if config_enabled '.security.firewall'; then
         if firewall_enabled; then security+=("firewall (on)"); else security+=("turn on the firewall"); fi
     fi
-    if config_enabled '.security.filevault_check' true; then
+    if config_enabled '.security.filevault_check'; then
         if filevault_on; then security+=("FileVault (on)"); else security+=("check FileVault"); fi
     fi
     if ((${#security[@]} > 0)); then

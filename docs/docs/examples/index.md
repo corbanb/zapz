@@ -10,12 +10,12 @@ over `~/.local/share/zapz/config/default.yml`, or keep it anywhere and pass it
 with `-c`. Run `zapz --dry-run` first to see what it would change. See
 [Configuration]({{ site.baseurl }}/configuration/) for what every key does.
 
-You can also start from one of the presets the setup wizard uses and trim it:
-[`essentials.yml`](https://github.com/corbanb/zapz/blob/main/config/presets/essentials.yml),
-[`webdev.yml`](https://github.com/corbanb/zapz/blob/main/config/presets/webdev.yml)
-or [`minimal.yml`](https://github.com/corbanb/zapz/blob/main/config/presets/minimal.yml).
-See [Presets]({{ site.baseurl }}/configuration/#presets) for what each one
-installs, or run `zapz --configure` to pick one again.
+You can also run `zapz --configure`, pick the personas closest to what you
+want, and trim the config it writes. See
+[Personas and Extras]({{ site.baseurl }}/docs/personas/) for what each one
+installs, and
+[`config/default.yml.example`](https://github.com/corbanb/zapz/blob/main/config/default.yml.example)
+for every option.
 
 - [Node.js Setup]({{ site.baseurl }}/docs/examples/node/): Node versions, global
   npm packages and the tools around them
@@ -54,9 +54,13 @@ homebrew:
     - "visual-studio-code"
 ```
 
-With no `node` section, the Node.js step is skipped and nvm isn't installed.
-With no `cron` section, scheduled updates stay off. With no `macos` section,
-your Dock, keyboard and Finder settings are left alone.
+With no `languages` section, no languages are installed. With no `terminal`
+or `shell` section, your terminal and shell are left alone. With no `cron`
+section, scheduled updates stay off. With no `macos` section, your Dock,
+keyboard and Finder settings are left alone.
+
+With no `security` section, Touch ID for `sudo`, the firewall and FileVault
+are left alone too.
 
 ## Packages only
 
