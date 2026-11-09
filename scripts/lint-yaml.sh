@@ -13,7 +13,7 @@ if ! command -v yamllint &> /dev/null; then
 fi
 
 cd "$PROJECT_ROOT" || exit 1
-if yamllint -c .yamllint .github config/default.yml.example config/presets .yamllint; then
+if yamllint -c .yamllint .github config/default.yml.example catalog .yamllint; then
     log_success "YAML lint passed"
 else
     log_error "YAML lint found problems"

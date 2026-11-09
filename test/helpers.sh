@@ -187,6 +187,8 @@ load_zapz() {
     source "$PROJECT_ROOT/lib/utils.sh"
     # shellcheck source=../lib/plan.sh
     source "$PROJECT_ROOT/lib/plan.sh"
+    # shellcheck source=../lib/catalog.sh
+    source "$PROJECT_ROOT/lib/catalog.sh"
     # shellcheck source=../lib/configure.sh
     source "$PROJECT_ROOT/lib/configure.sh"
     local module

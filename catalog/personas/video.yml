@@ -1,0 +1,44 @@
+---
+id: video
+title: Video editing
+tagline: Resolve, Final Cut, Premiere, Edits
+order: 6
+core:
+  - kind: cask
+    name: handbrake-app
+    label: HandBrake
+  - kind: cask
+    name: iina
+    label: IINA
+  - kind: formula
+    name: ffmpeg
+picks:
+  - question: Which editors do you use?
+    multi: true
+    items:
+      - kind: guided
+        label: DaVinci Resolve
+        url: https://www.blackmagicdesign.com/products/davinciresolve
+        note: free; Blackmagic asks you to register
+      - kind: mas
+        id: 424389933
+        label: Final Cut Pro
+        note: paid; from the App Store
+      - kind: cask
+        name: adobe-creative-cloud
+        label: Premiere Pro
+        note: through Adobe Creative Cloud
+        then: Sign in to Creative Cloud and install Premiere Pro
+      - kind: guided
+        label: Edits by Instagram
+        url: https://edits.instagram.com/
+        note: free; Apple Silicon
+  - question: Anything else?
+    multi: true
+    items:
+      - kind: cask
+        name: vlc
+        label: VLC
+      - kind: formula
+        name: yt-dlp
+        note: download video for editing

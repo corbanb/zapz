@@ -116,7 +116,7 @@ setup_github() {
     else
         ui_item skipped "GitHub CLI" "not signed in"
     fi
-    add_next_step "Sign in to GitHub: gh auth login --git-protocol ssh --web"
+    add_checklist "Sign in to GitHub" "" "gh auth login --git-protocol ssh --web"
     github_key_next_step
 }
 
@@ -125,8 +125,8 @@ github_key_next_step() {
     [[ "$ZAPZ_SSH_KEY_CREATED" == true && -f "$HOME/.ssh/id_ed25519.pub" ]] || return 0
     if command_exists pbcopy; then
         pbcopy < "$HOME/.ssh/id_ed25519.pub"
-        add_next_step "Add your SSH key to GitHub (it's on your clipboard): https://github.com/settings/ssh/new"
+        add_checklist "Add your SSH key to GitHub (it's on your clipboard)" "https://github.com/settings/ssh/new"
     else
-        add_next_step "Add ~/.ssh/id_ed25519.pub to GitHub: https://github.com/settings/ssh/new"
+        add_checklist "Add ~/.ssh/id_ed25519.pub to GitHub" "https://github.com/settings/ssh/new"
     fi
 }

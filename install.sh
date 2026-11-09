@@ -104,6 +104,8 @@ source "$ZAPZ_HOME/lib/version.sh"
 source "$ZAPZ_HOME/lib/logging.sh"
 # shellcheck source=lib/utils.sh
 source "$ZAPZ_HOME/lib/utils.sh"
+# shellcheck source=lib/catalog.sh
+source "$ZAPZ_HOME/lib/catalog.sh"
 # shellcheck source=lib/configure.sh
 source "$ZAPZ_HOME/lib/configure.sh"
 

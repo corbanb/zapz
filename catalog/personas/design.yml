@@ -1,0 +1,40 @@
+---
+id: design
+title: Design
+tagline: Figma, Affinity, Pixelmator Pro
+order: 8
+core:
+  - kind: cask
+    name: figma
+    label: Figma
+    then: Sign in to Figma
+  - kind: cask
+    name: affinity
+    label: Affinity
+    note: free
+  - kind: cask
+    name: imageoptim
+    label: ImageOptim
+  - kind: cask
+    name: fontbase
+    label: FontBase
+picks:
+  - question: Anything else?
+    multi: true
+    items:
+      - kind: cask
+        name: framer
+        label: Framer
+        note: design to live sites
+      - kind: cask
+        name: spline
+        label: Spline
+        note: 3D design
+      - kind: cask
+        name: adobe-creative-cloud
+        label: Adobe Creative Cloud
+        then: Sign in to Creative Cloud
+      - kind: mas
+        id: 1289583905
+        label: Pixelmator Pro
+        note: paid; from the App Store

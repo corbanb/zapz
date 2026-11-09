@@ -33,6 +33,33 @@ _partition_installed() {
     fi
 }
 
+# Friendly names for Homebrew packages, from the catalog ("VS Code" rather
+# than "visual-studio-code"). Prints "name<TAB>label" lines.
+_catalog_labels() {
+    local dir
+    dir="$(catalog_dir 2>/dev/null)" || return 0
+    [[ -d "$dir" ]] || return 0
+    yq ea '[.core // [], ((.picks // [])[].items)] | flatten | .[]
+        | select(.name != null and .label != null) | [.name, .label] | @tsv' \
+        "$dir"/essentials.yml "$dir"/personas/*.yml "$dir"/packs/*.yml 2>/dev/null | awk -F'\t' '!seen[$1]++'
+    # Terminals come from the wizard's terminal question, not the catalog
+    printf 'ghostty\tGhostty\niterm2\tiTerm2\nwarp\tWarp\n'
+}
+
+# Replace names in a ", "-joined list with their friendly labels
+_with_labels() {
+    [[ -n "$PLAN_LABELS" ]] || { cat; return; }
+    awk -F'\t' -v list="$(cat)" '
+        { label[$1] = $2 }
+        END {
+            n = split(list, parts, ", ")
+            for (i = 1; i <= n; i++) {
+                out = out (i > 1 ? ", " : "") ((parts[i] in label) ? label[parts[i]] : parts[i])
+            }
+            print out
+        }' <<< "$PLAN_LABELS"
+}
+
 # "a, b, c · 2 already installed"
 _describe_packages() {
     if [[ -z "$PLAN_MISSING" && "$PLAN_PRESENT" -eq 0 ]]; then
@@ -40,9 +67,9 @@ _describe_packages() {
     elif [[ -z "$PLAN_MISSING" ]]; then
         echo "all $PLAN_PRESENT already installed"
     elif ((PLAN_PRESENT == 0)); then
-        echo "$PLAN_MISSING"
+        _with_labels <<< "$PLAN_MISSING"
     else
-        echo "$PLAN_MISSING · $PLAN_PRESENT already installed"
+        echo "$(_with_labels <<< "$PLAN_MISSING") · $PLAN_PRESENT already installed"
     fi
 }
 
@@ -50,6 +77,7 @@ _describe_packages() {
 show_plan() {
     local have_brew=false installed_formulas="" installed_casks="" text
     PLAN_NEEDS_ADMIN=false
+    PLAN_LABELS=$(_catalog_labels)
 
     if command_exists brew || load_brew_shellenv; then
         have_brew=true
@@ -59,12 +87,31 @@ show_plan() {
 
     printf "\n  ${BOLD}Here's what zapz will do:${NC}\n\n"
 
+    local chosen
+    chosen=$(config_list '.profile.chosen' | _join)
+    [[ -z "$chosen" ]] || _plan_row "For" "$chosen"
+
     if xcode-select -p &>/dev/null; then
         text="already installed"
     else
         text="install (Apple's installer opens)"
     fi
     _plan_row "Tools" "Command Line Tools: $text"
+
+    local security=()
+    if config_enabled '.security.touch_id_sudo' true; then
+        if touch_id_sudo_enabled; then security+=("Touch ID for sudo (on)"); else security+=("turn on Touch ID for sudo"); fi
+    fi
+    if config_enabled '.security.firewall' true; then
+        if firewall_enabled; then security+=("firewall (on)"); else security+=("turn on the firewall"); fi
+    fi
+    if config_enabled '.security.filevault_check' true; then
+        if filevault_on; then security+=("FileVault (on)"); else security+=("check FileVault"); fi
+    fi
+    if ((${#security[@]} > 0)); then
+        _plan_row "Security" "$(printf '%s\n' "${security[@]}" | _join)"
+    fi
+    security_needs_admin && PLAN_NEEDS_ADMIN=true
 
     if [[ "$have_brew" == true ]]; then
         text="already installed"
@@ -76,6 +123,8 @@ show_plan() {
 
     _partition_installed "$installed_formulas" "$(config_list '.homebrew.formulas')"
     _plan_row "Packages" "$(_describe_packages)"
+    local new_formulas=0
+    [[ -z "$PLAN_MISSING" ]] || new_formulas=$(grep -o ',' <<< "$PLAN_MISSING," | wc -l)
 
     # Apps installed by hand count as present, as they do during setup
     local casks="" cask
@@ -90,6 +139,8 @@ show_plan() {
     _partition_installed "$installed_casks" "$casks"
     [[ -z "$PLAN_MISSING" ]] || PLAN_NEEDS_ADMIN=true
     _plan_row "Apps" "$(_describe_packages)"
+    local new_casks=0
+    [[ -z "$PLAN_MISSING" ]] || new_casks=$(grep -o ',' <<< "$PLAN_MISSING," | wc -l)
 
     local name email
     name=$(config_get '.git.user.name' "$(git config --global --get user.name 2>/dev/null || true)")
@@ -105,16 +156,37 @@ show_plan() {
     fi
     _plan_row "SSH" "$text"
 
+    local tools
+    tools=$(config_list '.languages.tools' | _join)
+    [[ -z "$tools" ]] || _plan_row "Languages" "$tools (with mise)"
+
+    # Older configs: Node.js with nvm
     local versions default packages
     versions=$(config_list '.node.versions' | _join)
-    if [[ -z "$versions" ]]; then
-        text="skipped"
-    else
+    if [[ -n "$versions" ]]; then
         default=$(config_get '.node.default')
         packages=$(config_list '.node.global_packages' | _join)
-        text="$versions${default:+ (default $default)}${packages:+ · $packages}"
+        _plan_row "Node.js" "$versions${default:+ (default $default)}${packages:+ · $packages}"
     fi
-    _plan_row "Node.js" "$text"
+
+    local terminal shell
+    case "$(config_get '.terminal.app')" in
+        ghostty) terminal="Ghostty" ;;
+        iterm2) terminal="iTerm2" ;;
+        warp) terminal="Warp" ;;
+        terminal) terminal="Terminal" ;;
+        *) terminal="terminal left as it is" ;;
+    esac
+    case "$(config_get '.shell.setup' none)" in
+        recommended) shell="Oh My Zsh, suggestions, highlighting, Starship prompt" ;;
+        light) shell="Starship prompt" ;;
+        *) shell="shell left as it is" ;;
+    esac
+    _plan_row "Terminal" "$terminal · $shell"
+
+    local app_store
+    app_store=$(yq e '(.apps.app_store // [])[].name' "$CONFIG_FILE" | _join)
+    [[ -z "$app_store" ]] || _plan_row "App Store" "$app_store (needs App Store sign-in)"
 
     if [[ "${SKIP_MACOS:-false}" == true ]]; then
         text="skipped (--skip-macos)"
@@ -148,6 +220,21 @@ show_plan() {
     fi
     _plan_row "GitHub" "$text"
 
-    printf "\n  ${DIM}Only missing things are installed; what you already have is left alone.${NC}\n"
-    printf "  ${DIM}Shell and SSH files are backed up before they're edited.${NC}\n"
+    # What will need the user, so nothing is a surprise
+    local needs=()
+    [[ -z "$app_store" ]] || needs+=("sign in to the App Store")
+    while IFS= read -r text; do
+        [[ -z "$text" ]] || needs+=("$text")
+    done < <(yq e '(.checklist // [])[].title' "$CONFIG_FILE")
+    if ((${#needs[@]} > 0)); then
+        printf "\n  ${BOLD}You'll need to:${NC}\n"
+        printf '%s\n' "${needs[@]}" | sed 's/^/    · /'
+        printf "  ${DIM}These are listed again at the end, with links.${NC}\n"
+    fi
+
+    # A rough guess: a minute per app, less for command-line tools
+    local minutes=$((5 + new_casks + new_formulas / 3))
+    [[ -z "$tools" ]] || minutes=$((minutes + 3))
+    [[ "$have_brew" == true ]] || minutes=$((minutes + 5))
+    printf "\n  ${DIM}About %d minutes. Only missing things are installed; files are backed up before edits.${NC}\n" "$minutes"
 }

@@ -33,11 +33,17 @@ source "${ZAPZ_ROOT}/lib/plan.sh"
 source "${ZAPZ_ROOT}/lib/configure.sh"
 
 # Source all setup modules
+# shellcheck source=lib/catalog.sh
+source "${ZAPZ_ROOT}/lib/catalog.sh"
 source "${ZAPZ_ROOT}/lib/modules/xcode.sh"
+source "${ZAPZ_ROOT}/lib/modules/security.sh"
 source "${ZAPZ_ROOT}/lib/modules/homebrew.sh"
 source "${ZAPZ_ROOT}/lib/modules/git.sh"
 source "${ZAPZ_ROOT}/lib/modules/ssh.sh"
+source "${ZAPZ_ROOT}/lib/modules/languages.sh"
 source "${ZAPZ_ROOT}/lib/modules/node.sh"
+source "${ZAPZ_ROOT}/lib/modules/terminal.sh"
+source "${ZAPZ_ROOT}/lib/modules/appstore.sh"
 source "${ZAPZ_ROOT}/lib/modules/macos.sh"
 source "${ZAPZ_ROOT}/lib/modules/schedule.sh"
 
@@ -322,18 +328,30 @@ main() {
 
     ensure_log_file
     local start=$SECONDS
-    ZAPZ_STEP_TOTAL=8
-    [[ "$SKIP_MACOS" == true ]] && ZAPZ_STEP_TOTAL=$((ZAPZ_STEP_TOTAL - 1))
-    [[ "$SKIP_SCHEDULE" == true ]] && ZAPZ_STEP_TOTAL=$((ZAPZ_STEP_TOTAL - 1))
 
-    install_xcode_tools
-    setup_git
-    setup_ssh
-    setup_homebrew
-    setup_node
-    [[ "$SKIP_MACOS" == true ]] || setup_macos_preferences
-    [[ "$SKIP_SCHEDULE" == true ]] || setup_scheduled_updates
-    setup_github
+    # The steps that apply to this config, in order
+    local steps=(install_xcode_tools setup_security setup_git setup_ssh setup_homebrew)
+    [[ -z "$(config_list '.languages.tools')" ]] || steps+=(setup_languages)
+    # Older configs set Node.js up with nvm (node.versions)
+    [[ -z "$(config_list '.node.versions')" ]] || steps+=(setup_node)
+    steps+=(setup_terminal_shell)
+    [[ "$(yq e '.apps.app_store // [] | length' "$CONFIG_FILE")" == 0 ]] || steps+=(setup_app_store)
+    [[ "$SKIP_MACOS" == true ]] || steps+=(setup_macos_preferences)
+    [[ "$SKIP_SCHEDULE" == true ]] || steps+=(setup_scheduled_updates)
+    steps+=(setup_github)
+    ZAPZ_STEP_TOTAL=${#steps[@]}
+
+    # Things from the config only the user can do (downloads, sign-ins)
+    local title url cmd
+    while IFS=$'\t' read -r title url cmd; do
+        [[ -n "$title" ]] || continue
+        add_checklist "$title" "${url#-}" "${cmd#-}"
+    done < <(yq e '(.checklist // [])[] | [.title, (.url // "-"), (.command // "-")] | @tsv' "$CONFIG_FILE")
+
+    local step
+    for step in "${steps[@]}"; do
+        "$step"
+    done
 
     add_next_step "Open a new terminal (or run: exec \$SHELL -l) to start using everything"
     local elapsed=$((SECONDS - start))

@@ -1,51 +1,69 @@
 ---
-# zapz configuration
-# The installer copies this to config/default.yml; edit that copy.
-# Missing or empty values are skipped, so delete anything you don't want
-# zapz to manage.
+# zapz configuration: every option, with examples.
+# The setup wizard writes config/default.yml for you; edit it freely, or
+# re-run the wizard with `zapz --configure`. Missing or empty values are
+# skipped, so delete anything you don't want zapz to manage.
 
-# Git configuration
+# What the wizard set this config up for (shown in the preview)
+profile:
+  chosen: ["Software development", "Voice dictation"]
+
+# Git
 git:
   user:
     name: ""   # Leave empty to keep your existing git identity
     email: ""
-  editor: "vim"
+  editor: "code --wait"
   default_branch: "main"
   # Any other `git config --global` options
   config:
     core.autocrlf: "input"
     pull.rebase: "true"
 
-# Node.js (installed with nvm)
-node:
-  versions:
-    - "lts/lithium"   # Node.js 26
-    - "lts/krypton"   # Node.js 24
-  default: "lts/lithium"
-  global_packages:
-    - "pnpm"
-    - "typescript"
-
-# Homebrew packages
+# Homebrew packages (formulas) and apps (casks)
 homebrew:
-  taps: []
+  taps: []            # Third-party taps; zapz also trusts them (brew trust)
   formulas:
     - "git"
     - "gh"
     - "jq"
-    - "ripgrep"      # Fast search tool
-    - "fd"           # Fast find alternative
-    - "tree"
-    - "wget"
-    - "oven-sh/bun/bun"
-    - "deno"
+    - "ripgrep"
+    - "mise"
   casks:
     - "visual-studio-code"
-    - "iterm2"
-    - "docker-desktop"
+    - "ghostty"
     - "1password"
 
-# macOS preferences (omit a key to leave that setting alone)
+# Languages and runtimes, installed with mise (https://mise.jdx.dev)
+languages:
+  tools:
+    - "node@lts"
+    - "python@3.13"
+    - "bun@latest"
+
+# Mac App Store apps (installed with mas; you need to be signed in, and to
+# have bought paid apps). Anything that can't install becomes a checklist item.
+apps:
+  app_store:
+    - {name: "Final Cut Pro", id: 424389933}
+
+# Your terminal: ghostty (zapz sets the font), iterm2, warp, or terminal
+terminal:
+  app: "ghostty"
+  font: "JetBrainsMono Nerd Font"
+
+# Your shell: recommended (Oh My Zsh, autosuggestions, highlighting,
+# Starship prompt), light (Starship only), or none (leave it alone)
+shell:
+  setup: "recommended"
+
+# Safer defaults
+security:
+  touch_id_sudo: true     # Use Touch ID for sudo
+  firewall: true          # Turn on the macOS firewall
+  filevault_check: true   # Remind you to turn on FileVault if it's off
+
+# macOS settings (omit a key to leave that setting alone)
 macos:
   dock:
     autohide: true
@@ -59,12 +77,29 @@ macos:
     show_hidden_files: true
     show_path_bar: true
     show_status_bar: true
+  screenshots:
+    folder: "~/Pictures/Screenshots"
   developer_mode: false      # Enable DevToolsSecurity (asks for your password)
 
-# Scheduled package updates (Homebrew, global npm packages, App Store via mas)
+# Scheduled updates (Homebrew, mise languages, App Store via mas)
 cron:
   update_schedule:
     enabled: true
     frequency: "weekly"   # daily, weekly or monthly (monthly runs on the 1st)
     time: "09:00"         # 24-hour HH:MM
     days: ["Monday"]      # Weekly only; one or more day names
+
+# Things only you can do, shown at the end with links to open or commands
+# to run (the wizard adds downloads and sign-ins here)
+checklist:
+  - title: "Download DaVinci Resolve"
+    url: "https://www.blackmagicdesign.com/products/davinciresolve"
+  - title: "Sign in to 1Password"
+  - title: "Set up Paperclip"
+    command: "npx paperclipai@latest onboard --yes"
+
+# Older configs: Node.js with nvm (use languages.tools with mise instead)
+node:
+  versions: []
+  default: ""
+  global_packages: []

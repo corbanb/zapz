@@ -1,0 +1,78 @@
+---
+id: essentials
+title: Essentials
+tagline: what every Mac gets
+core:
+  - kind: formula
+    name: git
+  - kind: formula
+    name: gh
+    label: GitHub CLI
+  - kind: formula
+    name: git-lfs
+  - kind: formula
+    name: jq
+  - kind: formula
+    name: ripgrep
+  - kind: formula
+    name: fd
+  - kind: formula
+    name: fzf
+  - kind: formula
+    name: bat
+  - kind: formula
+    name: eza
+  - kind: formula
+    name: zoxide
+  - kind: formula
+    name: btop
+  - kind: formula
+    name: tlrc
+  - kind: formula
+    name: mas
+  - kind: formula
+    name: wget
+  - kind: cask
+    name: 1password
+    label: 1Password
+    then: Sign in to 1Password
+  - kind: cask
+    name: the-unarchiver
+    label: The Unarchiver
+  - kind: cask
+    name: appcleaner
+    label: AppCleaner
+  - kind: cask
+    name: font-jetbrains-mono-nerd-font
+    label: JetBrains Mono Nerd Font
+picks:
+  - question: Which browser do you want?
+    multi: false
+    items:
+      - kind: cask
+        name: google-chrome
+        label: Chrome
+        note: works everywhere
+        recommended: true
+      - kind: cask
+        name: firefox
+        label: Firefox
+        note: independent and private
+      - kind: cask
+        name: brave-browser
+        label: Brave
+        note: blocks ads and trackers
+      - kind: none
+        label: Safari only
+        note: nothing extra to install
+  - question: Cloud storage?
+    multi: true
+    items:
+      - kind: cask
+        name: google-drive
+        label: Google Drive
+        then: Sign in to Google Drive
+      - kind: cask
+        name: dropbox
+        label: Dropbox
+        then: Sign in to Dropbox

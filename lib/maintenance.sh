@@ -29,6 +29,11 @@ else
     echo "Homebrew not found; skipping"
 fi
 
+if command -v mise >/dev/null 2>&1; then
+    echo "Updating languages (mise)..."
+    mise upgrade --yes || failed+=("mise")
+fi
+
 export NVM_DIR="$HOME/.nvm"
 if [[ -s "$NVM_DIR/nvm.sh" ]]; then
     # shellcheck disable=SC1091

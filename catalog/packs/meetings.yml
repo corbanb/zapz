@@ -1,0 +1,31 @@
+---
+id: meetings
+title: Meeting notes
+tagline: Granola, or open-source Meetily
+order: 1
+core: []
+picks:
+  - question: Which meeting note-taker?
+    multi: true
+    items:
+      - kind: cask
+        name: granola
+        label: Granola
+        group: Paid, polished
+        note: AI notes; no bot joins your call
+        recommended: true
+      - kind: cask
+        name: krisp
+        label: Krisp
+        group: Paid, polished
+        note: noise cancelling and notes
+      - kind: cask
+        name: meetily
+        label: Meetily
+        group: Free and private
+        note: open source; transcribes on your Mac
+      - kind: cask
+        name: anarlog
+        label: Anarlog
+        group: Free and private
+        note: open source; on-device transcription

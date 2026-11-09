@@ -1,0 +1,65 @@
+---
+id: creator
+title: Content & streaming
+tagline: OBS, Descript, CapCut, Canva
+order: 7
+core:
+  - kind: cask
+    name: obs
+    label: OBS
+  - kind: cask
+    name: descript
+    label: Descript
+    then: Sign in to Descript
+  - kind: cask
+    name: capcut
+    label: CapCut
+  - kind: cask
+    name: canva
+    label: Canva
+    then: Sign in to Canva
+  - kind: cask
+    name: shottr
+    label: Shottr
+    note: screenshots
+  - kind: cask
+    name: kap
+    label: Kap
+    note: screen recordings and GIFs
+picks:
+  - question: Anything else?
+    multi: true
+    items:
+      - kind: guided
+        label: Edits by Instagram
+        url: https://edits.instagram.com/
+        note: free video editor
+        recommended: true
+      - kind: cask
+        name: adobe-creative-cloud
+        label: Premiere Pro
+        note: through Adobe Creative Cloud
+        then: Sign in to Creative Cloud and install Premiere Pro
+      - kind: cask
+        name: elgato-stream-deck
+        label: Stream Deck
+      - kind: cask
+        name: elgato-camera-hub
+        label: Elgato Camera Hub
+      - kind: cask
+        name: elgato-wave-link
+        label: Elgato Wave Link
+      - kind: cask
+        name: loopback
+        label: Loopback
+        note: route audio between apps (paid)
+      - kind: cask
+        name: audio-hijack
+        label: Audio Hijack
+        note: record any app's audio (paid)
+      - kind: cask
+        name: audacity
+        label: Audacity
+      - kind: cask
+        name: loom
+        label: Loom

@@ -102,7 +102,7 @@ ticked.
 
 | Core | Optional |
 |---|---|
-| `claude` (desktop), `claude-code` | `codex`, `gemini-cli`, `opencode`, `cursor-cli` |
+| `claude` (desktop), `claude-code` | `codex`, `antigravity-cli` (Google; replaces the retired Gemini CLI), `opencode`, `cursor-cli` |
 | `chatgpt` | `perplexity` |
 | `cursor` | **Agent orchestration:** `conductor` (parallel Claude Code/Codex agents in git worktrees), `t3-code` (one app for Claude Code, Codex and Cursor agents), **Paperclip** (setup command: runs AI agents as a company; needs Node 24.11+) |
 | `uv` + Python (via mise), `jupyterlab` | `llm` CLI, `mstystudio`, `jan` |

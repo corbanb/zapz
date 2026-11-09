@@ -1,0 +1,54 @@
+---
+# Starting point for every config the setup wizard writes. The wizard adds
+# your name, email and everything from the personas and packs you choose.
+git:
+  default_branch: "main"
+  config:
+    pull.rebase: "true"
+
+homebrew:
+  taps: []
+  formulas: []
+  casks: []
+
+languages:
+  tools: []
+
+apps:
+  app_store: []
+
+terminal:
+  app: "ghostty"
+  font: "JetBrainsMono Nerd Font"
+
+shell:
+  setup: "recommended"
+
+security:
+  touch_id_sudo: true
+  firewall: true
+  filevault_check: true
+
+macos:
+  dock:
+    autohide: true
+    minimize-to-application: true
+  keyboard:
+    key_repeat: 2
+    initial_key_repeat: 15
+  finder:
+    show_all_extensions: true
+    show_hidden_files: true
+    show_path_bar: true
+    show_status_bar: true
+  screenshots:
+    folder: "~/Pictures/Screenshots"
+
+cron:
+  update_schedule:
+    enabled: true
+    frequency: "weekly"
+    time: "09:00"
+    days: ["Monday"]
+
+checklist: []

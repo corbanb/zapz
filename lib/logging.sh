@@ -103,6 +103,41 @@ add_next_step() {
     ZAPZ_NEXT_STEPS+=("$1")
 }
 
+# Something only the user can do, with an optional link to open or command
+# to run. Shown as a numbered checklist at the end.
+# Usage: add_checklist <title> [url] [command]
+ZAPZ_CHECKLIST=()
+add_checklist() {
+    local entry
+    for entry in ${ZAPZ_CHECKLIST[@]+"${ZAPZ_CHECKLIST[@]}"}; do
+        [[ "${entry%%|*}" != "$1" ]] || return 0
+    done
+    ZAPZ_CHECKLIST+=("$1|${2:-}|${3:-}")
+}
+
+# The checklist, then an offer to open its links
+ui_checklist() {
+    ((${#ZAPZ_CHECKLIST[@]} > 0)) || return 0
+    local entry title url cmd i=0 links=0
+    printf "\n  ${BOLD}Things only you can do${NC}\n"
+    for entry in "${ZAPZ_CHECKLIST[@]}"; do
+        IFS='|' read -r title url cmd <<< "$entry"
+        i=$((i + 1))
+        printf "  %2d  %s\n" "$i" "$title"
+        [[ -z "$cmd" ]] || printf "      ${DIM}run:${NC} %s\n" "$cmd"
+        [[ -z "$url" ]] || links=$((links + 1))
+    done
+    if ((links > 0)) && [[ -n "${ZAPZ_PROMPT_FD:-}" ]] && command -v open >/dev/null 2>&1; then
+        printf "\n"
+        if confirm "  Open the $links link(s) now?" Y; then
+            for entry in "${ZAPZ_CHECKLIST[@]}"; do
+                IFS='|' read -r title url cmd <<< "$entry"
+                [[ -z "$url" ]] || open "$url" >/dev/null 2>&1 || true
+            done
+        fi
+    fi
+}
+
 # Show a path under $HOME as ~/...
 tilde_path() {
     # shellcheck disable=SC2088  # a literal ~ is the point
@@ -149,14 +184,19 @@ _stop_spinner() {
 #
 # The command runs in the foreground, so Ctrl-C stops it (not just zapz)
 # and shell functions such as nvm keep their effects in this shell.
-# Usage: run_quiet [--housekeeping] <label> <command> [args...]
+# Usage: run_quiet [--housekeeping] [--soft <reason>] <label> <command> [args...]
 # --housekeeping: success isn't counted as a change in the summary
+# --soft <reason>: a failure is expected and fixable by the user, so it's
+#   shown as skipped with that reason instead of as a problem
 run_quiet() {
-    local success_state=changed
-    if [[ "$1" == --housekeeping ]]; then
-        success_state=housekeeping
-        shift
-    fi
+    local success_state=changed soft_reason=""
+    while [[ "$1" == --* ]]; do
+        case "$1" in
+            --housekeeping) success_state=housekeeping; shift ;;
+            --soft) soft_reason="$2"; shift 2 ;;
+            *) break ;;
+        esac
+    done
     local label="$1"
     shift
     local start=$SECONDS status=0
@@ -179,6 +219,8 @@ run_quiet() {
 
     if ((status == 0)); then
         ui_item "$success_state" "$label" "$(_format_duration $((SECONDS - start)))"
+    elif [[ -n "$soft_reason" ]]; then
+        ui_item skipped "$label" "$soft_reason"
     else
         ui_item failed "$label" "exit $status"
         # Last lines of this command's output, minus progress-bar noise
@@ -193,7 +235,7 @@ ui_summary() {
     local elapsed="$1" item
     printf '\n%s\n' "────────────────────────────────────────────────"
     if ((${#ZAPZ_FAILED[@]} == 0)); then
-        printf "${GREEN}${BOLD}✓ Done${NC} in %s\n" "$(_format_duration "$elapsed")"
+        printf "${GREEN}${BOLD}✓ Your Mac is ready ⚡${NC}  ${DIM}%s${NC}\n" "$(_format_duration "$elapsed")"
     else
         printf "${YELLOW}${BOLD}! Finished with %d problem(s)${NC} in %s\n" \
             "${#ZAPZ_FAILED[@]}" "$(_format_duration "$elapsed")"
@@ -205,6 +247,7 @@ ui_summary() {
             printf "  ${RED}✗${NC} %s\n" "$item"
         done
     fi
+    ui_checklist
     if ((${#ZAPZ_NEXT_STEPS[@]} > 0)); then
         printf "\n  ${BOLD}Next${NC}\n"
         for item in "${ZAPZ_NEXT_STEPS[@]}"; do

@@ -243,6 +243,23 @@ write_managed_block() {
     rm -f "$tmp"
 }
 
+# Remove a managed block (and back the file up first). Succeeds if one was
+# removed. Usage: remove_managed_block <file> <name>
+remove_managed_block() {
+    local file="$1" name="$2"
+    local begin="# >>> zapz ${name} >>>" end="# <<< zapz ${name} <<<" tmp
+    [[ -f "$file" ]] && grep -qxF "$begin" "$file" && grep -qxF "$end" "$file" || return 1
+    tmp=$(mktemp)
+    awk -v b="$begin" -v e="$end" '
+        $0 == b { skipping = 1; next }
+        skipping && $0 == e { skipping = 0; next }
+        !skipping
+    ' "$file" > "$tmp"
+    backup_file "$file"
+    cat "$tmp" > "$file"
+    rm -f "$tmp"
+}
+
 # Download file from URL
 download_file() {
     local url="$1"
