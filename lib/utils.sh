@@ -64,10 +64,14 @@ ensure_yq() {
         esac
         expected=$(_yq_sha256 "$arch")
         tmp=$(mktemp)
-        if ! curl -fsSL --retry 2 -o "$tmp" \
+        # GitHub's download servers sometimes answer 5xx for a minute; ride
+        # that out instead of failing the whole setup
+        if ! curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 15 -o "$tmp" \
                 "https://github.com/mikefarah/yq/releases/download/${ZAPZ_YQ_VERSION}/yq_darwin_${arch}"; then
             rm -f "$tmp"
-            log_error "Couldn't download yq (needed to read your config). Check your internet connection."
+            log_error "Couldn't download yq from GitHub (zapz needs it to read your config)."
+            log_info "Check your internet connection, or GitHub may be having trouble: try again in a few minutes."
+            log_info "Or install it with Homebrew (brew install yq), then try again."
             exit 1
         fi
         actual=$(_sha256 "$tmp")

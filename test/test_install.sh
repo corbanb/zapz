@@ -12,6 +12,19 @@ run_install() {
     ZAPZ_SOURCE="$PROJECT_ROOT" "$BASH" "$PROJECT_ROOT/install.sh"
 }
 
+test_failed_yq_download_still_leaves_the_command() {
+    setup_sandbox
+    stub yq 'echo "yq 0.0.0 (python)"'
+    stub curl 'exit 22'
+    stub uname '[[ "${1:-}" == -m ]] && echo arm64 || echo Darwin'
+    local out status=0
+    out=$(ZAPZ_SOURCE="$PROJECT_ROOT" "$BASH" "$PROJECT_ROOT/install.sh" 2>&1) || status=$?
+    [[ $status -ne 0 ]] || fail "install succeeded without yq"
+    [[ "$out" == *"brew install yq"* ]] || fail "no Homebrew hint: $out"
+    [[ -L "$HOME/.local/bin/zapz" ]] || fail "zapz command not created"
+    assert_contains "$HOME/.zshrc" 'lib/check_update.sh'
+}
+
 test_fresh_install() {
     setup_sandbox
     run_install > /dev/null
@@ -173,6 +186,7 @@ test_update_never_downgrades() {
 }
 
 section "install.sh"
+run_test "a failed yq download still leaves the zapz command" test_failed_yq_download_still_leaves_the_command
 run_test "fresh install creates checkout, config, command and rc block" test_fresh_install
 run_test "reinstall keeps config and doesn't duplicate rc changes" test_reinstall_is_idempotent
 run_test "installed rc block sources cleanly" test_shell_rc_sources_cleanly

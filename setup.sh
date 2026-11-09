@@ -242,12 +242,20 @@ configure_and_exit() {
     exit 0
 }
 
+# Homebrew 7 resets sudo's saved password the first time it needs sudo,
+# which would make every later installer ask again. This tells it the check
+# is already done, so the password given to zapz stays valid.
+keep_sudo_for_homebrew() {
+    export HOMEBREW_SUDO_CHECKED=1
+}
+
 # Ask for the password once, up front, and keep sudo's timestamp fresh so
 # nothing later stops to ask again while you're away
 start_admin_session() {
     # Without a terminal there's no one to type a password
     if [[ -z "${ZAPZ_PROMPT_FD:-}" ]]; then
         if sudo -n true 2>/dev/null; then
+            keep_sudo_for_homebrew
             return 0
         fi
         log_error "Homebrew and apps need administrator access, and there's no terminal to ask for a password."
@@ -259,6 +267,13 @@ start_admin_session() {
     if ! sudo -v; then
         log_error "Couldn't get administrator access. zapz needs an admin account."
         exit 1
+    fi
+    keep_sudo_for_homebrew
+    # Installers that need sudo without a terminal (Homebrew's pkg installs)
+    # ask with a Mac password dialog instead of failing or waiting unseen.
+    # Not over SSH, where no one can see a dialog.
+    if [[ -z "${SSH_CONNECTION:-}" ]] && command -v osascript >/dev/null 2>&1; then
+        export SUDO_ASKPASS="$ZAPZ_ROOT/lib/askpass.sh"
     fi
     # Detached from the terminal so it can't hold zapz's output open, and it
     # stops its own sleep when told to exit
