@@ -24,7 +24,8 @@ Options:
     -g, --gist URL         Use settings from a GitHub Gist raw URL
     --skip-macos           Skip macOS preferences setup
     --skip-schedule        Skip scheduled update setup (alias: --skip-cron)
-    --update               Update zapz to the latest version
+    --update [TARGET]      Update zapz to the latest release, or to TARGET:
+                           a version (v0.3.0), a branch to test, or "latest"
     -v, --verbose          Enable verbose output
     --version              Show version information
     -h, --help             Show this help message
@@ -42,7 +43,7 @@ Options:
 | `-g`, `--gist URL` | Download the config from `URL` and use it for this run. The URL must use `https`. Use the gist's **Raw** URL, for example `https://gist.githubusercontent.com/USER/ID/raw/config.yml`. The download goes to a private temp file that is deleted when zapz exits. If you pass both `-c` and `-g`, the gist is used. |
 | `--skip-macos` | Skip the macOS settings step (Dock, keyboard, Finder, Developer Mode). |
 | `--skip-schedule` | Skip the scheduled updates step. `--skip-cron` is an alias. |
-| `--update` | Update zapz itself, then exit. A branch install is updated with `git pull --ff-only`; a release install (the default) moves to the newest release tag, and never to an older version than the one you have. Fails if local changes in the install directory block the update. Your `config/default.yml` is not tracked by git, so updates never touch it. |
+| `--update [TARGET]` | Update zapz itself, then exit. With no target: a release install (the default) moves to the newest release and never to an older one; a branch you chose (like `main`) is fast-forwarded; a branch that's been deleted on GitHub (a merged test branch) returns to the latest release. `TARGET` can be a release (`v0.3.0`, the only way to go back), a branch to follow (to test a fix), or `latest` (the newest release, even from `main`). After updating it refreshes zapz's block in your shell config and shows the changelog since your old version. Fails without changing anything if local edits in the install directory would be overwritten. Your `config/default.yml` is not tracked by git, so updates never touch it. |
 | `-v`, `--verbose` | Print debug messages too. Command output always goes to the log file. |
 | `--version` | Print the installed version and the project URL, then exit. |
 | `-h`, `--help` | Print usage and exit. |
@@ -163,6 +164,10 @@ zapz --skip-macos --skip-schedule
 
 # Update zapz itself
 zapz --update
+
+# Try a branch with a fix, then go back to releases
+zapz --update fix/some-branch
+zapz --update latest
 ```
 
 ## Environment variables

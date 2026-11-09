@@ -16,7 +16,6 @@ ZAPZ_HOME="${ZAPZ_HOME:-$HOME/.local/share/zapz}"
 ZAPZ_REPO="${ZAPZ_REPO:-https://github.com/corbanb/zapz.git}"
 ZAPZ_REF="${ZAPZ_REF:-}"
 ZAPZ_SOURCE="${ZAPZ_SOURCE:-}"
-BIN_DIR="$HOME/.local/bin"
 
 # Minimal output helpers until the repo (and lib/logging.sh) is available
 print_info() { printf '  \033[0;34m➜\033[0m %s\n' "$1"; }
@@ -116,15 +115,7 @@ source "$ZAPZ_HOME/lib/configure.sh"
 
 # Put the `zapz` command on PATH first, so a failed download below still
 # leaves a command to run again
-mkdir -p "$BIN_DIR"
-ln -sf "$ZAPZ_HOME/setup.sh" "$BIN_DIR/zapz"
-
-write_managed_block "$(shell_rc_file)" "cli" "case \":\$PATH:\" in
-    *\":\$HOME/.local/bin:\"*) ;;
-    *) export PATH=\"\$HOME/.local/bin:\$PATH\" ;;
-esac
-export ZAPZ_HOME=\"$ZAPZ_HOME\"
-[ -f \"\$ZAPZ_HOME/lib/check_update.sh\" ] && . \"\$ZAPZ_HOME/lib/check_update.sh\""
+install_cli_command "$ZAPZ_HOME"
 
 ensure_yq
 log_success "zapz ${ZAPZ_VERSION} is in $(tilde_path "$ZAPZ_HOME")"

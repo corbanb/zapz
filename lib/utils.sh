@@ -202,6 +202,37 @@ shell_rc_file() {
     esac
 }
 
+# Print the changelog sections newer than version $2 (not Unreleased)
+# Usage: changelog_since <CHANGELOG.md> <version>
+changelog_since() {
+    [[ -f "$1" ]] || return 0
+    awk -v from="${2#v}" '
+        /^## \[Unreleased\]/ { next }
+        /^## \[/ {
+            v = $0; sub(/^## \[/, "", v); sub(/\].*/, "", v)
+            if (v == from) exit
+            on = 1
+        }
+        on { print }
+    ' "$1" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}'
+}
+
+# Put the `zapz` command on PATH and have new shells show the update
+# notice. Safe to run again: install.sh and `zapz --update` both call it, so
+# an update also brings changes to these lines.
+# Usage: install_cli_command <zapz checkout>
+install_cli_command() {
+    local home="$1" bin_dir="$HOME/.local/bin"
+    mkdir -p "$bin_dir"
+    ln -sf "$home/setup.sh" "$bin_dir/zapz"
+    write_managed_block "$(shell_rc_file)" "cli" "case \":\$PATH:\" in
+    *\":\$HOME/.local/bin:\"*) ;;
+    *) export PATH=\"\$HOME/.local/bin:\$PATH\" ;;
+esac
+export ZAPZ_HOME=\"$home\"
+[ -f \"\$ZAPZ_HOME/lib/check_update.sh\" ] && . \"\$ZAPZ_HOME/lib/check_update.sh\""
+}
+
 # Write a block into a shell rc file between marker comments. An existing
 # block is replaced where it is, so re-running neither duplicates it nor
 # moves it past lines the user added after it.

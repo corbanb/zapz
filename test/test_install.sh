@@ -185,6 +185,93 @@ test_update_never_downgrades() {
     [[ "$out" == *"already up to date"* ]] || fail "$out"
 }
 
+# Add a commit on branch $1 of the fake GitHub repo
+push_commit() {
+    local work="$SANDBOX/work"
+    git -C "$work" checkout -q -B "$1"
+    echo "$2" >> "$work/README.md"
+    git -C "$work" -c commit.gpgsign=false commit -q -am "$2"
+    git -C "$work" push -q "$ORIGIN" "$1"
+    git -C "$work" checkout -q main
+}
+
+test_update_leaves_a_deleted_branch_for_the_latest_release() {
+    setup_sandbox
+    stub uname 'echo Darwin'
+    make_release_repo
+    push_commit fix/thing "a fix"
+    local zapz_home="$HOME/.local/share/zapz" out
+    ZAPZ_REPO="$ORIGIN" ZAPZ_REF=fix/thing "$BASH" "$PROJECT_ROOT/install.sh" > /dev/null
+    assert_eq "$(git -C "$zapz_home" symbolic-ref --short HEAD)" "fix/thing"
+    # The branch's PR merged and GitHub deleted the branch
+    git -C "$ORIGIN" branch -q -D fix/thing
+    out=$("$BASH" "$zapz_home/setup.sh" --update 2>&1)
+    assert_eq "$(git -C "$zapz_home" describe --tags --exact-match)" "v0.3.0"
+    [[ "$out" == *"no longer on GitHub"* ]] || fail "$out"
+}
+
+test_update_to_a_chosen_version_or_branch() {
+    setup_sandbox
+    stub uname 'echo Darwin'
+    make_release_repo
+    push_commit fix/thing "a fix"
+    local zapz_home="$HOME/.local/share/zapz" out status=0
+    ZAPZ_REPO="$ORIGIN" ZAPZ_REF=v0.3.0 "$BASH" "$PROJECT_ROOT/install.sh" > /dev/null
+
+    # Back to an older release, only when asked for by name
+    "$BASH" "$zapz_home/setup.sh" --update v0.1.0 > /dev/null
+    assert_eq "$(git -C "$zapz_home" describe --tags --exact-match)" "v0.1.0"
+    # A branch to test, then back to the latest release
+    "$BASH" "$zapz_home/setup.sh" --update fix/thing > /dev/null
+    assert_eq "$(git -C "$zapz_home" symbolic-ref --short HEAD)" "fix/thing"
+    "$BASH" "$zapz_home/setup.sh" --update latest > /dev/null
+    assert_eq "$(git -C "$zapz_home" describe --tags --exact-match)" "v0.3.0"
+
+    out=$("$BASH" "$zapz_home/setup.sh" --update nope 2>&1) || status=$?
+    [[ $status -ne 0 ]] || fail "accepted an unknown target"
+    [[ "$out" == *"no zapz release or branch called 'nope'"* ]] || fail "$out"
+}
+
+test_update_keeps_following_main() {
+    setup_sandbox
+    stub uname 'echo Darwin'
+    make_release_repo
+    local zapz_home="$HOME/.local/share/zapz"
+    ZAPZ_REPO="$ORIGIN" ZAPZ_REF=main "$BASH" "$PROJECT_ROOT/install.sh" > /dev/null
+    push_commit main "newer code"
+    "$BASH" "$zapz_home/setup.sh" --update > /dev/null
+    assert_eq "$(git -C "$zapz_home" symbolic-ref --short HEAD)" "main"
+    assert_eq "$(git -C "$zapz_home" rev-parse HEAD)" "$(git -C "$ORIGIN" rev-parse main)"
+}
+
+test_update_shows_whats_new_and_refreshes_shell_setup() {
+    setup_sandbox
+    stub uname 'echo Darwin'
+    make_release_repo
+    local zapz_home="$HOME/.local/share/zapz" out
+    ZAPZ_REPO="$ORIGIN" ZAPZ_REF=v0.1.0 "$BASH" "$PROJECT_ROOT/install.sh" > /dev/null
+    # Lose the shell setup, as if an older zapz had written something else
+    : > "$HOME/.zshrc"
+    out=$("$BASH" "$zapz_home/setup.sh" --update 2>&1)
+    [[ "$out" == *"Updated zapz 0.1.0 → 0.3.0 (v0.3.0)"* ]] || fail "$out"
+    [[ "$out" == *"What's new"* && "$out" == *"## [0.3.0]"* ]] || fail "no notes: $out"
+    [[ "$out" != *"## [0.1.0]"* ]] || fail "showed notes for the old version: $out"
+    assert_contains "$HOME/.zshrc" 'lib/check_update.sh'
+}
+
+test_update_refuses_to_overwrite_local_changes() {
+    setup_sandbox
+    stub uname 'echo Darwin'
+    make_release_repo
+    local zapz_home="$HOME/.local/share/zapz" out status=0
+    ZAPZ_REPO="$ORIGIN" ZAPZ_REF=v0.1.0 "$BASH" "$PROJECT_ROOT/install.sh" > /dev/null
+    echo "# my tweak" >> "$zapz_home/README.md"
+    out=$("$BASH" "$zapz_home/setup.sh" --update 2>&1) || status=$?
+    [[ $status -ne 0 ]] || fail "updated over local changes"
+    [[ "$out" == *"stash"* ]] || fail "$out"
+    assert_eq "$(git -C "$zapz_home" describe --tags --exact-match)" "v0.1.0"
+}
+
 section "install.sh"
 run_test "a failed yq download still leaves the zapz command" test_failed_yq_download_still_leaves_the_command
 run_test "fresh install creates checkout, config, command and rc block" test_fresh_install
@@ -194,6 +281,11 @@ run_test "bash users get ~/.bash_profile" test_bash_users_get_bash_profile
 run_test "refuses to install over an unrelated directory" test_refuses_non_zapz_directory
 run_test "tag installs can update and return to the default branch" test_ref_install_can_update
 run_test "--update never moves to an older version" test_update_never_downgrades
+run_test "--update leaves a deleted test branch for the latest release" test_update_leaves_a_deleted_branch_for_the_latest_release
+run_test "--update goes to a chosen version, branch or latest" test_update_to_a_chosen_version_or_branch
+run_test "--update keeps following main if you chose it" test_update_keeps_following_main
+run_test "--update shows what's new and refreshes the shell setup" test_update_shows_whats_new_and_refreshes_shell_setup
+run_test "--update won't overwrite local changes" test_update_refuses_to_overwrite_local_changes
 run_test "refuses to run outside macOS" test_refuses_non_macos
 run_test "installs the Command Line Tools on a fresh Mac" test_installs_command_line_tools_first
 run_test "gives up if the Command Line Tools never install" test_gives_up_if_command_line_tools_never_install

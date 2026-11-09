@@ -218,7 +218,8 @@ Options:
     -g, --gist URL         Use settings from a GitHub Gist raw URL
     --skip-macos           Skip macOS preferences setup
     --skip-schedule        Skip scheduled update setup (alias: --skip-cron)
-    --update               Update zapz to the latest version
+    --update [TARGET]      Update zapz to the latest release, or to TARGET:
+                           a version (v0.3.0), a branch to test, or "latest"
     -v, --verbose          Enable verbose output
     --version              Show version information
     -h, --help             Show this help message
@@ -292,7 +293,12 @@ Only `https` URLs are accepted.
 
 **zapz itself.** When a new release is out, new terminals show a one-line
 notice. The check runs in the background at most once a day, so it never slows
-your prompt. Update with `zapz --update`; it never moves to an older version.
+your prompt. Update with `zapz --update`: it moves to the newest release (never
+an older one), shows what's new, and refreshes zapz's lines in your shell
+config. To test a branch, run `zapz --update <branch>`; once that branch is
+merged and deleted, `zapz --update` brings you back to the latest release.
+`zapz --update v0.3.0` goes back to a specific release, and if you follow
+`main`, `zapz --update latest` returns you to releases.
 To turn the notice off, add `export ZAPZ_DISABLE_UPDATE_CHECK=1` to your shell
 config.
 

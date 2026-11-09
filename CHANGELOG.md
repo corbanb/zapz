@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `zapz --update` can take a target: a release to go back to
+  (`zapz --update v0.3.0`), a branch to test (`zapz --update fix/thing`), or
+  `latest`. After updating it shows what's new and refreshes zapz's lines in
+  your shell config.
+
+### Changed
+- `zapz --update` on a branch that's been deleted on GitHub (a merged test
+  branch) returns to the latest release instead of failing, and the error for
+  local edits says how to set them aside.
+
 ### Fixed
 - Apps that install with a system installer (Google Drive, Zoom, Docker and
   others) no longer stop setup. Homebrew 7 forgets the password zapz asks for
