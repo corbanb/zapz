@@ -7,7 +7,7 @@ The zero-dependency macOS development environment setup tool.
 [![Version](https://img.shields.io/github/v/release/corbanb/zapz?include_prereleases&label=version)](https://github.com/corbanb/zapz/releases)
 [![Tests](https://github.com/corbanb/macos-setup/actions/workflows/test.yml/badge.svg)](https://github.com/corbanb/macos-setup/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![macOS](https://img.shields.io/badge/macOS-Monterey%2B-brightgreen)]()
+[![macOS](https://img.shields.io/badge/macOS-Sonoma%2B%20(14--26)-brightgreen)]()
 [![Documentation](https://img.shields.io/badge/docs-corbanb.github.io%2Fzapz-blue)](https://corbanb.github.io/zapz)
 
 [📖 Documentation](https://corbanb.github.io/zapz) | [🚀 Quick Start](#quick-start) | [⚙️ Configuration](#configuration) | [🔍 Examples](https://corbanb.github.io/zapz/examples)
