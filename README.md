@@ -2,15 +2,14 @@
 
 # ⚡️ zapz
 
-The zero-dependency macOS development environment setup tool.
+Set up a Mac for development with one command, from one YAML file.
 
 [![Version](https://img.shields.io/github/v/release/corbanb/zapz?include_prereleases&label=version)](https://github.com/corbanb/zapz/releases)
-[![Tests](https://github.com/corbanb/macos-setup/actions/workflows/test.yml/badge.svg)](https://github.com/corbanb/macos-setup/actions/workflows/test.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![macOS](https://img.shields.io/badge/macOS-Sonoma%2B%20(14--26)-brightgreen)]()
-[![Documentation](https://img.shields.io/badge/docs-corbanb.github.io%2Fzapz-blue)](https://corbanb.github.io/zapz)
+[![CI](https://github.com/corbanb/zapz/actions/workflows/ci.yml/badge.svg)](https://github.com/corbanb/zapz/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![macOS](https://img.shields.io/badge/macOS-14%2B-brightgreen)](#requirements)
 
-[📖 Documentation](https://corbanb.github.io/zapz) | [🚀 Quick Start](#quick-start) | [⚙️ Configuration](#configuration) | [🔍 Examples](https://corbanb.github.io/zapz/examples)
+[📖 Documentation](https://corbanb.github.io/zapz) | [🚀 Quick Start](#-quick-start) | [⚙️ Configuration](#%EF%B8%8F-configuration)
 
 </div>
 
@@ -18,537 +17,252 @@ The zero-dependency macOS development environment setup tool.
 
 ## 🎯 Overview
 
-`zapz` automates the setup of a macOS development environment with a single command. It's perfect for:
-- Setting up a new Mac
-- Resetting development environments
-- Maintaining consistent setups across teams
-- Backing up and restoring development configurations
+`zapz` turns a fresh Mac into a working development machine: Homebrew and your
+apps, git, an SSH key for GitHub, Node.js, sensible macOS settings, and
+scheduled updates.
 
-📚 **[Full Documentation Available Here](https://corbanb.github.io/zapz)**
+It's built to be calm and trustworthy:
 
-## ✨ Features
+- **No YAML to start.** A short wizard asks your name, email and what you want
+  (Essentials, Web development or Minimal) and writes the config for you.
+- **See it before it happens.** zapz shows exactly what it will install and
+  change, and what you already have, then asks before touching anything. Try
+  `zapz --dry-run` any time.
+- **Questions first, then hands-off.** Your password, git identity and SSH
+  passphrase are asked up front; the long part runs without you, and you get
+  a notification when it's done.
+- **Safe to run again.** Anything already installed or set is left alone, and
+  shell and SSH files are backed up before zapz edits them.
+- **Clear results.** One line per item, a summary of what changed and what
+  needs attention, and a full log for when something goes wrong.
 
-- 🔧 **Zero Dependencies**: Works on a fresh macOS installation
-- 🎛 **Fully Configurable**: Via YAML or GitHub Gist
-- 🔄 **Smart Updates**: Automatic update notifications and easy updating
-- 🛡 **Safe Execution**: Idempotent operations, run multiple times safely
-- 📝 **Detailed Logging**: Verbose output and error handling
-- 🔔 **Update Notifications**: Get notified of new versions when opening your terminal
+## ✨ What it sets up
 
-### What Gets Installed
-
-<details>
-<summary>Click to expand installed components</summary>
-
-#### Core Development Tools
-- ⚙️ Xcode Command Line Tools
-- 🍺 Homebrew
-- 📦 Git & GitHub CLI
-- 🟩 Node.js (via nvm)
-- 🏃 Bun & Deno
-- 💻 VS Code
-- 🖥 iTerm2
-
-#### Applications
-- 🌐 Arc Browser
-- 🎨 Figma
-- ⌨️ Cursor
-- 💬 Slack
-- 🎵 Spotify
-- 🔒 1Password
-
-#### Development Environment
-- SSH key generation
-- Git configuration
-- Shell preferences
-- macOS system settings
-</details>
+1. **Command Line Tools** (Apple's developer tools, which include git)
+2. **Git**: name, email, editor, default branch and other `git config` options
+3. **SSH key**: an ed25519 key protected by a passphrase that macOS keeps in
+   your Keychain, plus a `github.com` entry in `~/.ssh/config`
+4. **Homebrew** and your packages and apps. A package that fails is listed in
+   the summary instead of stopping setup.
+5. **Node.js** via [nvm](https://github.com/nvm-sh/nvm): versions, a default and
+   global npm packages
+6. **macOS settings**: Dock, key repeat and Finder
+7. **Scheduled updates**: a launchd job that runs `brew upgrade`,
+   `npm update -g` and `mas upgrade` on your schedule
+8. **GitHub**: sign in with the GitHub CLI, which can upload your new SSH key
+   for you
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Requirements
 
-First time setup:
-```bash
-# Make scripts executable (one-time setup)
-chmod +x setup.sh test/test.sh lib/modules/*.sh
-```
+- macOS 14 (Sonoma) or later; macOS 15 or later is recommended (Homebrew's
+  fully supported versions). Tested on macOS 15, 26 and 27.
+- An administrator account (Homebrew and apps need your password once).
 
-The tool requires these dependencies:
-```bash
-# Install with Homebrew
-brew install yq        # YAML processor
-brew install shellcheck  # Shell script linter (optional, for development)
-```
+That's it. On a new Mac the installer first opens Apple's Command Line Tools
+dialog; click **Install** and it carries on when that finishes.
 
-### Option 1: One-line Installation
+### Install
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | bash
 ```
 
-This will:
-- Install the tool to `~/.local/bin/mac-setup`
-- Create a `zapz` command in your PATH
-- Set up auto-updates
-- Install required dependencies if missing
+The installer:
 
-### Option 2: Manual Installation
+1. installs the latest zapz release to `~/.local/share/zapz` and adds the
+   `zapz` command to `~/.local/bin` (it edits `~/.zshrc`, or `~/.bash_profile`
+   for bash, inside a clearly marked block);
+2. asks a few questions and writes your config;
+3. offers to preview and run setup right away.
+
+Prefer to read it first? Download it, look, then run it:
+
 ```bash
-# Clone the repository
-git clone https://github.com/corbanb/zapz.git
-cd zapz
-
-# Install
-./install.sh
+curl -fsSLO https://raw.githubusercontent.com/corbanb/zapz/main/install.sh
+less install.sh
+bash install.sh
 ```
 
-### Usage
-```bash
-# Show help
-zapz --help
+To install a specific release or branch, set `ZAPZ_REF` (for example
+`ZAPZ_REF=v0.2.0` or `ZAPZ_REF=main`).
 
-# Run with default settings
-zapz
+### What a run looks like
 
-# Run with custom config
-zapz -c path/to/config.yml
+```text
+  ⚡ zapz 0.2.0 · macOS 27.2 · Apple Silicon
+
+  Here's what zapz will do:
+
+  Tools      Command Line Tools: already installed
+  Homebrew   install Homebrew
+  Packages   git, gh, jq, ripgrep, fd, tree, wget, oven-sh/bun/bun, deno
+  Apps       visual-studio-code, iterm2, docker-desktop, 1password
+  Git        Ada Lovelace · ada@example.com
+  SSH        new key for GitHub (you'll choose a passphrase)
+  Node.js    lts/lithium, lts/krypton (default lts/lithium) · pnpm, typescript
+  macOS      Dock: auto-hide on, Key repeat rate 2, Finder: hidden files on, …
+  Updates    weekly, Monday 09:00
+  GitHub     sign in with the GitHub CLI (optional, at the end)
+
+  Continue? [Y/n]
+
+[4/8] Homebrew
+  ✓ ripgrep                      4s
+  · jq                           already installed
+  ✓ visual-studio-code           21s
+
+────────────────────────────────────────────────
+✓ Done in 14m 05s
+  31 changed · 6 already set
+
+  Next
+  ➜ Open a new terminal (or run: exec $SHELL -l) to start using everything
+
+  Full log: ~/Library/Logs/zapz/setup-20261109-091500.log
+  Backups of edited files: ~/.local/state/zapz/backups/20261109-091500
 ```
 
-## 📖 Usage Guide
+## 📖 Usage
 
-### Basic Usage
-
-```bash
-./setup.sh                    # Run with default settings
-./setup.sh --verbose         # Run with detailed output
-./setup.sh --force          # Force reinstall all components
-```
-
-### Advanced Options
-
-```bash
-Usage: setup.sh [OPTIONS]
+```text
+Usage: zapz [OPTIONS]
 
 Options:
-    -h, --help              Show this help message
-    -v, --verbose          Enable verbose output
-    -f, --force            Force reinstallation of components
+    -n, --dry-run          Show what would happen, change nothing
+    -y, --yes              Don't ask for confirmation
+    --configure            Answer a few questions to (re)create your config
     -c, --config FILE      Use custom config file
-    -g, --gist URL         Use settings from a GitHub Gist URL
-    --skip-macos          Skip macOS preferences setup
-    --skip-cron           Skip cron job setup
+    -g, --gist URL         Use settings from a GitHub Gist raw URL
+    --skip-macos           Skip macOS preferences setup
+    --skip-schedule        Skip scheduled update setup (alias: --skip-cron)
+    --update               Update zapz to the latest version
+    -v, --verbose          Enable verbose output
+    --version              Show version information
+    -h, --help             Show this help message
 ```
+
+Examples:
+
+```bash
+zapz --dry-run                        # Preview only
+zapz --configure                      # Re-run the setup wizard
+zapz -c ~/dotfiles/zapz.yml           # Use a config kept elsewhere
+zapz --skip-macos --skip-schedule     # Packages and tools only
+zapz --yes                            # Unattended (e.g. scripts, CI)
+```
+
+zapz exits with status 1 if any item failed, so scripts can tell.
 
 ## ⚙️ Configuration
 
-### Using Custom Configuration
+The setup wizard writes `~/.local/share/zapz/config/default.yml` from one of
+the [presets](config/presets/) and your answers. Edit it any time, or re-run
+`zapz --configure`, which asks before replacing it and backs up the old one.
+Updates never overwrite it. Anything you leave out or leave empty is skipped.
+Every option is documented in
+[`config/default.yml.example`](config/default.yml.example).
 
-1. Create your configuration:
-```bash
-cp config/default.yml config/custom.yml
-```
-
-2. Edit to match your preferences:
 ```yaml
-# custom.yml
 git:
   user:
     name: "Your Name"
-    email: "your.email@example.com"
+    email: "you@example.com"
   editor: "code --wait"
+  default_branch: "main"
+  config:                      # any other git config --global options
+    pull.rebase: "true"
 
 node:
-  versions:
-    - "lts/hydrogen"
-    - "lts/iron"
-  default: "lts/iron"
-  global_packages:
-    - "pnpm"
-    - "typescript"
-```
+  versions: ["lts/lithium", "lts/krypton"]
+  default: "lts/lithium"
+  global_packages: ["pnpm", "typescript"]
 
-3. Run with your config:
-```bash
-./setup.sh -c config/custom.yml
-```
-
-### Using GitHub Gist
-
-1. Create a Gist with your configuration
-2. Get the raw URL of your Gist
-3. Run setup with your Gist:
-```bash
-./setup.sh -g https://gist.raw.githubusercontent.com/user/gistid/file
-```
-
-<details>
-<summary>Example Gist Configuration</summary>
-
-```yaml
-# Example configuration for web development
 homebrew:
-  taps:
-    - "homebrew/cask"
-    - "homebrew/cask-fonts"
-  formulas:
-    - "git"
-    - "gh"
-    - "node"
-    - "yarn"
-  casks:
-    - "visual-studio-code"
-    - "docker"
-    - "figma"
-
-node:
-  versions:
-    - "lts/iron"
-  global_packages:
-    - "typescript"
-    - "next"
-
-git:
-  user:
-    name: "Your Name"
-    email: "your.email@example.com"
-  editor: "code --wait"
+  taps: []
+  formulas: ["gh", "jq", "ripgrep", "oven-sh/bun/bun"]
+  casks: ["visual-studio-code", "iterm2"]
 
 macos:
-  dock:
-    autohide: true
-    magnification: true
-  keyboard:
-    key_repeat: 2
-    initial_key_repeat: 15
-```
-</details>
+  dock: { autohide: true, magnification: false }
+  keyboard: { key_repeat: 2, initial_key_repeat: 15 }
+  finder: { show_hidden_files: true, show_path_bar: true }
+  developer_mode: false        # DevToolsSecurity; asks for your password
 
-## 🔄 Maintenance
-
-### Automatic Updates
-
-zapz provides two ways to stay up-to-date:
-
-1. **Terminal Notifications**
-- Checks for updates when you open a new terminal
-- Shows notifications only once per day
-- Provides direct update commands
-
-```bash
-# Example notification
-🔔 A new version of zapz is available: v0.2.0
-   Current version: v0.1.0
-   Run 'zapz --update' to update
-```
-
-2. **Cron Jobs** that:
-- Runs on your configured schedule (daily/weekly/monthly)
-- Updates Homebrew packages
-- Updates npm global packages
-- Runs system health checks
-- Sends desktop notifications
-
-#### Update Configuration
-
-Configure updates in your `config.yml`:
-```yaml
 cron:
   update_schedule:
     enabled: true
-    frequency: "daily"    # daily, weekly, or monthly
-    time: "00:00"        # When to run (24h format)
-    days: ["Sunday"]     # For weekly updates
-  terminal_update:
-    enabled: true        # Check when opening terminal
-    frequency: 86400     # Minimum seconds between checks
-
-cli:
-  alias: "zapz"         # Your preferred command alias
-  auto_alias: true      # Add alias automatically
+    frequency: "weekly"        # daily, weekly or monthly
+    time: "09:00"
+    days: ["Monday"]
 ```
 
-### Manual Updates
+See the [configuration reference](https://corbanb.github.io/zapz/configuration)
+for every option.
+
+### Sharing a config with a Gist
+
+Put your config in a [GitHub Gist](https://gist.github.com), click **Raw**, and
+pass that URL:
 
 ```bash
-# Check for updates
-zapz --version
+zapz --gist https://gist.githubusercontent.com/you/abc123/raw/zapz.yml
+```
 
-# Update zapz
+Only `https` URLs are accepted.
+
+## 🔄 Staying up to date
+
+**zapz itself.** When a new release is out, new terminals show a one-line
+notice. The check runs in the background at most once a day, so it never slows
+your prompt. Update with:
+
+```bash
 zapz --update
-
-# Force update
-zapz --update --force
 ```
 
-### Disabling Update Notifications
+To turn the notice off, add `export ZAPZ_DISABLE_UPDATE_CHECK=1` to your shell
+config.
 
-If you prefer not to see update notifications, you can:
-
-1. **Disable in config**:
-```yaml
-cli:
-  update_notifications: false
-```
-
-2. **Disable temporarily**:
-```bash
-# Add to your shell RC file
-export ZAPZ_DISABLE_UPDATE_CHECK=1
-```
-
-3. **Remove from shell RC**:
-```bash
-# Edit your .zshrc or .bashrc and remove or comment out:
-# zapz update check
-```
-
-## 🛠 Development
-
-### Development Dependencies
-
-Additional dependencies for development:
-```bash
-brew install shellcheck  # Shell script linter
-```
-
-### Running Tests
-
-The project includes a comprehensive test suite that verifies both core functionality and installation processes.
-
-#### Prerequisites
-```bash
-# Required dependencies
-brew install yq          # YAML processor
-brew install shellcheck  # Shell script linter
-```
-
-#### Running the Test Suite
-```bash
-# Run all tests
-./test/run_tests.sh
-
-# Run individual test suites
-./test/test.sh         # Run core tests
-./test/test_install.sh # Run installation tests
-
-# Run syntax checker
-shellcheck setup.sh lib/**/*.sh test/*.sh
-```
-
-#### Test Categories
-
-The test suite includes:
-
-1. **Core Tests** (`test.sh`)
-   - Module loading and syntax validation
-   - Configuration file validation
-   - Utility function testing
-   - Directory structure verification
-
-2. **Installation Tests** (`test_install.sh`)
-   - Clean installation process
-   - Update scenarios
-   - File permissions
-   - PATH configuration
-   - Dependency management
-
-#### Continuous Integration
-
-GitHub Actions automatically runs the full test suite:
-- On every push to main branch
-- For all pull requests
-- Tests run on macOS latest
-
-#### Test Output Example
-
-```bash
-=== Running All Tests ===
-Running test.sh...
-✓ Core tests passed
-
-Running test_install.sh...
-✓ Installation tests passed
-
-=== All test suites passed ===
-```
-
-#### Adding New Tests
-
-To add new tests:
-1. Choose the appropriate test file (`test.sh` or `test_install.sh`)
-2. Add your test using the `run_test` function:
-    ```bash
-    run_test "Description of your test" \
-        "command_to_test" || ((failed_tests++))
-    ```
-3. Run the test suite to verify
-
-### Running GitHub Actions
-
-You can run GitHub Actions workflows in two ways:
-
-#### 1. Local Testing with `act`
-
-Run workflows locally using Docker containers:
-```bash
-# Install act
-brew install act
-
-# Run specific workflow
-./test/run_actions.sh local lint
-./test/run_actions.sh local test
-./test/run_actions.sh local install
-
-# Run all workflows
-./test/run_actions.sh local all
-```
-
-Benefits:
-- Fast feedback loop
-- No GitHub Actions minutes consumed
-- Works offline
-- Great for development and debugging
-
-Limitations:
-- Can't perfectly simulate macOS environments
-- Some GitHub features unavailable
-- Environment differences may exist
-
-#### 2. Remote Testing with GitHub CLI
-
-Run workflows on GitHub's infrastructure:
-```bash
-# Install GitHub CLI
-brew install gh
-gh auth login
-
-# Run specific workflow
-./test/run_actions.sh remote lint
-./test/run_actions.sh remote test
-./test/run_actions.sh remote install
-
-# Run all workflows
-./test/run_actions.sh remote all
-```
-
-Benefits:
-- Tests in real GitHub environment
-- Full macOS support
-- All GitHub features available
-- Exact production environment
-
-Limitations:
-- Consumes GitHub Actions minutes
-- Requires internet connection
-- May have queue times
-- Requires GitHub authentication
-
-#### When to Use Each
-
-- Use `act` for:
-  - Development and debugging
-  - Quick syntax checks
-  - Testing workflow changes
-  - Local validation
-
-- Use GitHub CLI for:
-  - Final verification
-  - macOS-specific tests
-  - Release workflows
-  - Full integration testing
+**Your packages.** With `cron.update_schedule.enabled`, zapz installs a launchd
+agent that updates Homebrew packages, global npm packages and App Store apps (if
+[`mas`](https://github.com/mas-cli/mas) is installed) on your schedule. Unlike
+cron, launchd catches up on runs missed while the Mac was asleep. Output goes
+to `~/Library/Logs/zapz/update.log`. To stop it, set `enabled: false` and run
+`zapz` again.
 
 ## 🔍 Troubleshooting
 
-<details>
-<summary>Common Issues</summary>
+**`zapz: command not found`.** Open a new terminal, or run `exec $SHELL -l`.
 
-### Permission Denied
+**Something failed.** The summary lists each problem, and the full output is
+in the log it names (`~/Library/Logs/zapz/`). Fix the cause and run `zapz`
+again; everything that already worked is skipped.
+
+**A Homebrew app failed.** Usually it was already installed by hand. Delete
+the app from `/Applications` and re-run, or remove it from your config.
+
+**Undo a change to a shell or SSH file.** zapz copies each file to
+`~/.local/state/zapz/backups/<date-time>/` before editing it. Its own changes
+are between `# >>> zapz … >>>` and `# <<< zapz … <<<` lines, so you can also
+just delete that block.
+
+**Running without a terminal (scripts, CI).** Pass `--yes`, and make sure the
+account can use `sudo` without a password if Homebrew or apps need installing.
+
+## 🛠 Development
+
 ```bash
-chmod +x setup.sh
+git clone https://github.com/corbanb/zapz.git && cd zapz
+brew install yq shellcheck yamllint
+./test/run_tests.sh
 ```
 
-### Homebrew Installation Fails
-- Ensure you have internet connection
-- Run `xcode-select --install` manually
-
-### Configuration Not Loading
-- Verify YAML syntax
-- Check file permissions
-- Ensure correct file path
-
-### Permission Denied
-+ If you get permission errors or "files are not executable" errors:
-```bash
-# Make all scripts executable
-chmod +x setup.sh
-chmod +x test/test.sh
-chmod +x lib/modules/*.sh
-```
-</details>
+The tests run every setup module against a throwaway `HOME` with stubbed
+system commands, so they're safe to run on your own Mac (and on Linux). See
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on:
-- Setting up your development environment
-- Our development workflow
-- Running tests and GitHub Actions locally
-- Pull request requirements
-- Code style guidelines
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Run tests (`./test/run_actions.sh local all`)
-4. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-5. Push to the branch (`git push origin feature/amazing-feature`)
-6. Open a Pull Request
-
-## 🙏 Acknowledgments
-
-- [Homebrew](https://brew.sh)
-- [nvm](https://github.com/nvm-sh/nvm)
-- [GitHub CLI](https://cli.github.com)
-
----
-
-<div align="center">
-Made with ❤️ by @corbanb
-</div>
-
-#### Setting Up Secrets
-
-For running GitHub Actions locally with `act`, you'll need to set up a secrets file:
-
-1. During installation, a `.secrets` file is created at `~/.local/bin/.secrets`
-2. Edit this file with your GitHub token:
-```bash
-# Open secrets file in your editor
-code ~/.local/bin/.secrets  # or vim, nano, etc.
-```
-
-3. Add your GitHub Personal Access Token:
-```bash
-# Get your token from: https://github.com/settings/tokens
-# Required permissions:
-# - repo (Full control of private repositories)
-# - workflow (Update GitHub Action workflows)
-GITHUB_TOKEN=your-github-token-here
-github-token=your-github-token-here
-```
-
-4. Secure the file permissions:
-```bash
-chmod 600 ~/.local/bin/.secrets
-```
-
-The secrets file is automatically used when running workflows:
-```bash
-# No need to specify --secret-file, it's handled automatically
-act -j lint -W .github/workflows/lint.yml \
-  -P ubuntu-latest=catthehacker/ubuntu:act-latest
-```
-
-Note: The `.secrets` file is gitignored by default to prevent accidental commits of sensitive information.
+[MIT](LICENSE)

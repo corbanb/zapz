@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
+      - 'README.md'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -34,10 +35,8 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Install dependencies
-        run: |
-          cd docs
-          bundle install
+      - name: Generate home page from README
+        run: sed 's|](docs/|](|g' README.md > docs/index.md
 
       - name: Build site
         run: |

@@ -1,132 +1,149 @@
 #!/usr/bin/env bash
 
-# Installation script for macOS setup tool
+# Install zapz:
+#   curl -fsSL https://raw.githubusercontent.com/corbanb/zapz/main/install.sh | bash
+#
+# Environment overrides:
+#   ZAPZ_HOME    install location (default: ~/.local/share/zapz)
+#   ZAPZ_REPO    git URL to clone (default: https://github.com/corbanb/zapz.git)
+#   ZAPZ_REF     branch or tag to install (default: the latest release, or the
+#                default branch if there is no release yet)
+#   ZAPZ_SOURCE  local directory to copy instead of cloning (used by CI)
+
 set -euo pipefail
 
-# Default installation directory
-DEFAULT_INSTALL_DIR="$HOME/.local/bin/mac-setup"
-INSTALL_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
+ZAPZ_HOME="${ZAPZ_HOME:-$HOME/.local/share/zapz}"
+ZAPZ_REPO="${ZAPZ_REPO:-https://github.com/corbanb/zapz.git}"
+ZAPZ_REF="${ZAPZ_REF:-}"
+ZAPZ_SOURCE="${ZAPZ_SOURCE:-}"
+BIN_DIR="$HOME/.local/bin"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+# Minimal output helpers until the repo (and lib/logging.sh) is available
+print_info() { printf '  \033[0;34m➜\033[0m %s\n' "$1"; }
+print_error() { printf '  \033[0;31m✗ %s\033[0m\n' "$1" >&2; }
 
-# Print with color
-print_info() { printf "${BLUE}INFO: %s${NC}\n" "$1"; }
-print_success() { printf "${GREEN}SUCCESS: %s${NC}\n" "$1"; }
-print_error() { printf "${RED}ERROR: %s${NC}\n" "$1" >&2; }
+if [[ "$(uname)" != "Darwin" ]]; then
+    print_error "zapz only works on macOS"
+    exit 1
+fi
 
-# Check and install dependencies
-check_dependencies() {
-    local missing_deps=()
-
-    # Required dependencies
-    local deps=(
-        "yq:YAML processor for configuration"
-    )
-
-    print_info "Checking dependencies..."
-
-    for dep in "${deps[@]}"; do
-        local name="${dep%%:*}"
-        local description="${dep#*:}"
-
-        if ! command -v "$name" >/dev/null 2>&1; then
-            missing_deps+=("$name")
-            print_info "Missing $name ($description)"
-        fi
-    done
-
-    if ((${#missing_deps[@]} > 0)); then
-        if ! command -v brew >/dev/null 2>&1; then
-            print_error "Homebrew is required to install dependencies"
-            print_info "Install Homebrew first: https://brew.sh"
+# A fresh Mac has no git until the Xcode Command Line Tools are installed.
+# Start that install (Apple's dialog) and wait, so one command works on a
+# brand-new machine.
+if ! xcode-select -p >/dev/null 2>&1; then
+    print_info "Installing the Xcode Command Line Tools (needed for git)..."
+    xcode-select --install >/dev/null 2>&1 || true
+    print_info "Click Install in the dialog that opened. This can take several minutes."
+    waited=0
+    timeout="${ZAPZ_XCODE_TIMEOUT:-1800}"
+    until xcode-select -p >/dev/null 2>&1; do
+        if ((waited >= timeout)); then
+            print_error "The Xcode Command Line Tools still aren't installed"
+            print_info "Run 'xcode-select --install', finish the installer, then run this command again"
             exit 1
         fi
+        sleep 5
+        waited=$((waited + 5))
+    done
+fi
 
-        print_info "Installing missing dependencies..."
-        for dep in "${missing_deps[@]}"; do
-            print_info "Installing $dep..."
-            brew install "$dep"
-        done
+if ! git --version >/dev/null 2>&1; then
+    print_error "git is required to install zapz, but it isn't working"
+    print_info "Try reinstalling the Xcode Command Line Tools: xcode-select --install"
+    exit 1
+fi
+
+printf '\n  \033[1m⚡ Installing zapz\033[0m\n\n'
+
+# Install the latest release by default: a tested version, not whatever is
+# on the main branch today. ZAPZ_REF=main opts into the latest code.
+if [[ -z "$ZAPZ_REF" && -z "$ZAPZ_SOURCE" && "$ZAPZ_REPO" == "https://github.com/corbanb/zapz.git" ]]; then
+    ZAPZ_REF=$(curl -fsS --max-time 10 https://api.github.com/repos/corbanb/zapz/releases/latest 2>/dev/null \
+        | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n1) || ZAPZ_REF=""
+fi
+
+# Fetch or update the code
+if [[ -n "$ZAPZ_SOURCE" ]]; then
+    print_info "Copying zapz from $ZAPZ_SOURCE"
+    mkdir -p "$ZAPZ_HOME"
+    # Skip .git (read-only objects break re-copying) and the user's config
+    tar -C "$ZAPZ_SOURCE" --exclude=./.git --exclude=./config/default.yml -cf - . \
+        | tar -C "$ZAPZ_HOME" -xf -
+elif [[ -d "$ZAPZ_HOME/.git" ]]; then
+    print_info "Updating existing installation in $ZAPZ_HOME..."
+    if [[ -n "$ZAPZ_REF" ]]; then
+        git -C "$ZAPZ_HOME" fetch --quiet origin "$ZAPZ_REF"
+        if git -C "$ZAPZ_HOME" ls-remote --exit-code --heads origin "$ZAPZ_REF" >/dev/null 2>&1; then
+            # A branch: stay on it so `zapz --update` can pull
+            git -C "$ZAPZ_HOME" checkout --quiet -B "$ZAPZ_REF" FETCH_HEAD
+        else
+            git -C "$ZAPZ_HOME" checkout --quiet FETCH_HEAD
+        fi
+    elif git -C "$ZAPZ_HOME" symbolic-ref -q HEAD >/dev/null; then
+        git -C "$ZAPZ_HOME" pull --ff-only --quiet
+    else
+        # A previous ZAPZ_REF install left a detached HEAD; return to the
+        # default branch
+        git -C "$ZAPZ_HOME" fetch --quiet origin
+        default_ref=$(git -C "$ZAPZ_HOME" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/main)
+        git -C "$ZAPZ_HOME" checkout --quiet -B "${default_ref#origin/}" "$default_ref"
     fi
-}
-
-# Check if running on macOS
-if [[ "$(uname)" != "Darwin" ]]; then
-    print_error "This tool only works on macOS"
+elif [[ -e "$ZAPZ_HOME" && -n "$(ls -A "$ZAPZ_HOME")" ]]; then
+    print_error "$ZAPZ_HOME exists and is not a zapz checkout; move it or set ZAPZ_HOME"
     exit 1
-fi
-
-# Check and install dependencies
-check_dependencies
-
-# Create installation directory
-mkdir -p "$INSTALL_DIR"
-
-# Copy example config if default doesn't exist
-if [[ ! -f "$INSTALL_DIR/config/default.yml" ]]; then
-    cp "$INSTALL_DIR/config/default.yml.example" "$INSTALL_DIR/config/default.yml"
-fi
-
-# Copy example secrets if .secrets doesn't exist
-if [[ ! -f "$HOME/.local/bin/.secrets" ]]; then
-    cp "$INSTALL_DIR/.secrets.example" "$HOME/.local/bin/.secrets"
-    chmod 600 "$HOME/.local/bin/.secrets"  # Secure file permissions
-    print_info "Created .secrets file at $HOME/.local/bin/.secrets"
-    print_info "Please update it with your GitHub token"
-fi
-
-# Clone repository
-if [[ "${MOCK_INSTALL:-false}" == "true" ]]; then
-    print_info "Running in test mode..."
-elif [[ -d "$INSTALL_DIR/.git" ]]; then
-    print_info "Updating existing installation..."
-    git -C "$INSTALL_DIR" pull
 else
-    print_info "Installing mac-setup..."
-    git clone https://github.com/yourusername/macos-setup.git "$INSTALL_DIR"
+    print_info "Installing zapz to $ZAPZ_HOME..."
+    mkdir -p "$(dirname "$ZAPZ_HOME")"
+    git clone --quiet ${ZAPZ_REF:+--branch "$ZAPZ_REF"} "$ZAPZ_REPO" "$ZAPZ_HOME"
 fi
 
-# Make all scripts executable
-chmod +x "$INSTALL_DIR/setup.sh"
-chmod +x "$INSTALL_DIR/test/test.sh"
-chmod +x "$INSTALL_DIR/lib/modules/"*.sh
+ZAPZ_ROOT="$ZAPZ_HOME"
+# shellcheck source=lib/version.sh
+source "$ZAPZ_HOME/lib/version.sh"
+# shellcheck source=lib/logging.sh
+source "$ZAPZ_HOME/lib/logging.sh"
+# shellcheck source=lib/utils.sh
+source "$ZAPZ_HOME/lib/utils.sh"
+# shellcheck source=lib/configure.sh
+source "$ZAPZ_HOME/lib/configure.sh"
 
-# Verify permissions
-if ! [[ -x "$INSTALL_DIR/setup.sh" ]] || ! [[ -x "$INSTALL_DIR/test/test.sh" ]]; then
-    print_error "Failed to set executable permissions"
-    print_info "Try running: chmod +x setup.sh test/test.sh lib/modules/*.sh"
-    exit 1
+ensure_yq
+log_success "zapz ${ZAPZ_VERSION} is in $(tilde_path "$ZAPZ_HOME")"
+
+# First install: answer a few questions instead of editing YAML (or, with
+# no terminal to ask, start from the example config)
+config="$ZAPZ_HOME/config/default.yml"
+asked=false
+if [[ -f "$config" ]]; then
+    log_success "Keeping your config: $(tilde_path "$config")"
+elif can_prompt; then
+    open_prompt_input
+    run_config_wizard "$config"
+    asked=true
+else
+    cp "$ZAPZ_HOME/config/default.yml.example" "$config"
+    log_success "Created your config from the example: $(tilde_path "$config")"
 fi
 
-# Create symlink in PATH
-SYMLINK_PATH="$HOME/.local/bin/zapz"
-mkdir -p "$(dirname "$SYMLINK_PATH")" || true
-ln -sf "$INSTALL_DIR/setup.sh" "$SYMLINK_PATH"
+# Put the `zapz` command on PATH
+mkdir -p "$BIN_DIR"
+ln -sf "$ZAPZ_HOME/setup.sh" "$BIN_DIR/zapz"
 
-# Add to PATH if needed
-if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-    SHELL_RC="$HOME/.zshrc"
-    touch "$SHELL_RC"  # Ensure file exists
-    [[ "$SHELL" == */bash ]] && SHELL_RC="$HOME/.bashrc"
+write_managed_block "$(shell_rc_file)" "cli" "case \":\$PATH:\" in
+    *\":\$HOME/.local/bin:\"*) ;;
+    *) export PATH=\"\$HOME/.local/bin:\$PATH\" ;;
+esac
+export ZAPZ_HOME=\"$ZAPZ_HOME\"
+[ -f \"\$ZAPZ_HOME/lib/check_update.sh\" ] && . \"\$ZAPZ_HOME/lib/check_update.sh\""
 
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_RC"
-
-    # Add update check to shell RC
-    cat >> "$SHELL_RC" << 'EOF'
-
-# zapz update check
-if [[ -f "$HOME/.local/bin/mac-setup/lib/check_update.sh" ]]; then
-    source "$HOME/.local/bin/mac-setup/lib/check_update.sh"
-fi
-EOF
-
-    print_info "Added ~/.local/bin to PATH in $SHELL_RC"
+if [[ "$asked" == true ]]; then
+    printf "\n"
+    if confirm "  Preview and run setup now?" Y; then
+        # Hand the open terminal input to setup so answers carry over
+        export ZAPZ_PROMPT_FD
+        exec "$ZAPZ_HOME/setup.sh" <&"$ZAPZ_PROMPT_FD"
+    fi
 fi
 
-print_success "Installation complete!"
-print_info "Run 'zapz --help' to get started"
-print_info "Source your shell config or restart your terminal to use the 'zapz' command"
+printf "\n  Installed. Open a new terminal, then run ${BOLD}zapz${NC} to preview and apply your setup.\n"
+printf "  ${DIM}Your config: %s · change it with zapz --configure${NC}\n" "$(tilde_path "$config")"

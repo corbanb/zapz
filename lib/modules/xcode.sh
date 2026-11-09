@@ -1,24 +1,31 @@
 #!/usr/bin/env bash
 
+# Wait for the Command Line Tools installer started by `xcode-select --install`
+wait_for_command_line_tools() {
+    local waited=0 timeout="${ZAPZ_XCODE_TIMEOUT:-1800}"
+    until xcode-select -p &>/dev/null; do
+        if ((waited >= timeout)); then
+            return 1
+        fi
+        sleep 5
+        waited=$((waited + 5))
+    done
+}
+
 install_xcode_tools() {
-    log_header "Checking Xcode Command Line Tools"
-    
-    # Check if xcode-select is already installed
+    log_header "Command Line Tools"
+
     if xcode-select -p &>/dev/null; then
-        log_success "Xcode Command Line Tools already installed"
+        ui_item existing "Command Line Tools" "already installed"
         return 0
     fi
-    
-    log_info "Installing Xcode Command Line Tools..."
-    
-    # Trigger installation prompt
-    xcode-select --install &>/dev/null
-    
-    # Wait for installation to complete
-    until xcode-select -p &>/dev/null; do
-        log_info "Waiting for Xcode Command Line Tools installation to complete..."
-        sleep 5
-    done
-    
-    log_success "Xcode Command Line Tools installed successfully"
-} 
+
+    # Opens Apple's installer dialog; exits non-zero if one is already open
+    xcode-select --install &>/dev/null || true
+    printf "  Click Install in the dialog that opened. This can take several minutes.\n"
+    if ! run_quiet "Command Line Tools" wait_for_command_line_tools; then
+        log_error "The Command Line Tools still aren't installed"
+        log_info "Run 'xcode-select --install', finish the installer, then run zapz again"
+        exit 1
+    fi
+}

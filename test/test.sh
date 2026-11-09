@@ -1,303 +1,115 @@
 #!/usr/bin/env bash
 
-# Test script for macOS setup tool
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+# Static checks: syntax, portability, config shape and config loading.
 
-# Test results tracking for bash 3.2
-declare -a TEST_NAMES
-declare -a TEST_RESULTS
-declare -a TEST_ERRORS
+# shellcheck source=helpers.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/helpers.sh"
 
-# Source utilities for logging
-source "${PROJECT_ROOT}/lib/logging.sh"
+EXAMPLE_CONFIG="$PROJECT_ROOT/config/default.yml.example"
 
-# Enhanced test runner with error capture
-run_test() {
-    local test_name="$1"
-    local test_command="$2"
-    local error_output
+shipped_scripts() {
+    printf '%s\n' "$PROJECT_ROOT/setup.sh" "$PROJECT_ROOT/install.sh" \
+        "$PROJECT_ROOT"/lib/*.sh "$PROJECT_ROOT"/lib/modules/*.sh
+}
 
-    log_info "Running test: $test_name"
+test_syntax() {
+    local file
+    while IFS= read -r file; do
+        "$BASH" -n "$file" || fail "syntax error in $file"
+    done < <(shipped_scripts; ls "$PROJECT_ROOT"/test/*.sh "$PROJECT_ROOT"/scripts/*.sh)
+}
 
-    # Add test to order tracking
-    TEST_NAMES[${#TEST_NAMES[@]}]="$test_name"
+# macOS ships bash 3.2; these need bash 4+
+test_no_bash4_features() {
+    local hits
+    hits=$(shipped_scripts | xargs grep -nE '\$\{[A-Za-z_]+(,,|\^\^)|declare -A|local -A|mapfile|readarray|&>>|\|&' || true)
+    [[ -z "$hits" ]] || fail "bash 4+ syntax found:
+$hits"
+}
 
-    # Capture both output and exit status
-    error_output=$(eval "$test_command" 2>&1)
-    local status="$?"
+test_executable_bits() {
+    local file mode
+    for file in setup.sh install.sh lib/maintenance.sh test/run_tests.sh; do
+        mode=$(git -C "$PROJECT_ROOT" ls-files -s "$file" | awk '{print $1}')
+        assert_eq "$mode" "100755" "git file mode of $file"
+    done
+}
 
-    if [ $status -eq 0 ]; then
-        log_success "✓ $test_name"
-        TEST_RESULTS[${#TEST_RESULTS[@]}]="pass"
-        TEST_ERRORS[${#TEST_ERRORS[@]}]=""
+test_every_module_defines_its_entry_point() {
+    local pair
+    for pair in xcode:install_xcode_tools homebrew:setup_homebrew git:setup_git ssh:setup_ssh \
+            node:setup_node macos:setup_macos_preferences schedule:setup_scheduled_updates; do
+        grep -q "^${pair#*:}()" "$PROJECT_ROOT/lib/modules/${pair%%:*}.sh" \
+            || fail "${pair%%:*}.sh does not define ${pair#*:}"
+        grep -q "${pair#*:}$" "$PROJECT_ROOT/setup.sh" || fail "setup.sh never calls ${pair#*:}"
+    done
+}
+
+test_example_config_shape() {
+    yq e '.' "$EXAMPLE_CONFIG" > /dev/null
+    local path
+    for path in .homebrew.formulas .homebrew.casks .node.versions; do
+        [[ "$(yq e "$path | length" "$EXAMPLE_CONFIG")" -gt 0 ]] || fail "$path is empty"
+    done
+    [[ -n "$(yq e '.node.default // ""' "$EXAMPLE_CONFIG")" ]] || fail ".node.default is missing"
+    assert_eq "$(yq e '.cron.update_schedule.enabled | tag' "$EXAMPLE_CONFIG")" "!!bool"
+}
+
+test_config_created_from_example() {
+    setup_sandbox; load_zapz
+    cp "$EXAMPLE_CONFIG" "$SANDBOX/default.yml.example"
+    GIST_URL='' CUSTOM_CONFIG='' DEFAULT_CONFIG="$SANDBOX/default.yml"
+    load_configuration > /dev/null
+    assert_file "$SANDBOX/default.yml"
+    assert_eq "$CONFIG_FILE" "$SANDBOX/default.yml"
+}
+
+test_custom_config_used() {
+    setup_sandbox; load_zapz
+    GIST_URL='' CUSTOM_CONFIG="$EXAMPLE_CONFIG" DEFAULT_CONFIG=/nonexistent
+    load_configuration
+    assert_eq "$CONFIG_FILE" "$EXAMPLE_CONFIG"
+}
+
+test_missing_custom_config_fails() {
+    setup_sandbox; load_zapz
+    GIST_URL='' CUSTOM_CONFIG=/nonexistent/config.yml
+    if (load_configuration) 2>/dev/null; then fail "missing config accepted"; fi
+}
+
+test_gist_requires_https() {
+    setup_sandbox; load_zapz
+    stub curl
+    GIST_URL='http://gist.githubusercontent.com/x/raw/config.yml' CUSTOM_CONFIG=''
+    if (load_configuration) 2>/dev/null; then fail "http gist accepted"; fi
+    assert_not_contains "$STUB_LOG" "curl"
+}
+
+test_shellcheck() {
+    if ! command -v shellcheck >/dev/null; then
+        echo "shellcheck not installed; skipped"
         return 0
-    else
-        log_error "✗ $test_name"
-        TEST_RESULTS[${#TEST_RESULTS[@]}]="fail"
-        TEST_ERRORS[${#TEST_ERRORS[@]}]="$error_output"
-        return 1
     fi
+    (cd "$PROJECT_ROOT" && shellcheck -x setup.sh install.sh lib/*.sh lib/modules/*.sh test/*.sh scripts/*.sh)
 }
 
-# Print test summary
-print_test_summary() {
-    local failed_tests=$1
-    local total_tests=${#TEST_NAMES[@]}
-    local passed_tests=$((total_tests - failed_tests))
-
-    echo
-    log_header "Test Summary"
-    echo "Total Tests: $total_tests"
-    echo "Passed: $passed_tests"
-    echo "Failed: $failed_tests"
-
-    if ((failed_tests > 0)); then
-        echo
-        log_header "Failed Tests Details"
-        local i
-        for ((i=0; i<${#TEST_NAMES[@]}; i++)); do
-            if [[ "${TEST_RESULTS[$i]}" == "fail" ]]; then
-                log_error "✗ ${TEST_NAMES[$i]}:"
-                echo "  Error: ${TEST_ERRORS[$i]}"
-                echo
-            fi
-        done
-    fi
-}
-
-# Check for required dependencies
-check_dependencies() {
-    local missing_deps=()
-
-    # List of required dependencies
-    local deps=(
-        "yq:Required for configuration processing"
-        "shellcheck:Required for syntax checking (development only)"
-    )
-
-    for dep_entry in "${deps[@]}"; do
-        local dep="${dep_entry%%:*}"
-        local desc="${dep_entry#*:}"
-        if ! command -v "$dep" >/dev/null 2>&1; then
-            missing_deps+=("$dep")
-            log_error "Missing $dep - $desc"
-        fi
-    done
-
-    if ((${#missing_deps[@]} > 0)); then
-        echo
-        log_info "Install missing dependencies with:"
-        echo "  brew install ${missing_deps[*]}"
-        exit 1
-    fi
-}
-
-# Test version handling
-test_version_handling() {
-    local test_dir
-    test_dir=$(mktemp -d)
-    local failed_tests=0
-
-    # Setup test git repo
-    (
-        cd "$test_dir" || exit 1
-        git init
-        git config --local user.email "test@example.com"
-        git config --local user.name "Test User"
-        git config --local init.defaultBranch main
-        echo "# Test Repo" > README.md
-        git add README.md
-        git commit -m "Initial commit"
-    )
-
-    # Test initial tag creation
-    run_test "Initial tag creation (v0.1.0)" \
-        "(cd \"$test_dir\" && \
-         ! git tag | grep -q '^v' && \
-         git tag -a v0.1.0 -m 'Initial release' && \
-         git tag | grep -q '^v0.1.0$')" || ((failed_tests++))
-
-    # Test version increment scenarios
-    local version_tests=(
-        "v0.1.0:v0.1.1"     # Basic increment
-        "v1.0.0:v1.0.1"     # Major version
-        "v0.9.9:v0.9.10"    # Double digit increment
-        "v1.9.99:v1.9.100"  # Triple digit increment
-        "v2.0.0-beta:v2.0.1" # Pre-release version
-    )
-
-    for test_case in "${version_tests[@]}"; do
-        local current_version="${test_case%%:*}"
-        local expected_version="${test_case#*:}"
-
-        # Clean previous tags
-        (cd "$test_dir" && git tag | xargs git tag -d >/dev/null 2>&1)
-
-        # Test version increment
-        run_test "Version increment from $current_version to $expected_version" \
-            "(cd \"$test_dir\" && \
-             git tag -a \"$current_version\" -m 'Test version' && \
-             latest_tag=\$(git tag -l \"v*\" | sort -V | tail -n1) && \
-             current_version=\${latest_tag#v} && \
-             major=\$(echo \$current_version | cut -d. -f1) && \
-             minor=\$(echo \$current_version | cut -d. -f2) && \
-             patch=\$(echo \$current_version | cut -d. -f3 | cut -d- -f1) && \
-             next_patch=\$((patch + 1)) && \
-             next_version=\"v\$major.\$minor.\$next_patch\" && \
-             [ \"\$next_version\" = \"$expected_version\" ])" || ((failed_tests++))
-    done
-
-    # Clean tags for sorting test
-    (cd "$test_dir" && git tag | xargs git tag -d >/dev/null 2>&1)
-
-    # Test version sorting with mixed versions
-    (cd "$test_dir" || exit 1
-     # Create tags in random order
-     git tag -a v0.2.0 -m "Test version"
-     git tag -a v0.1.0 -m "Test version"
-     git tag -a v0.10.0 -m "Test version"
-     git tag -a v1.0.0-beta -m "Test version"
-     git tag -a v1.0.0 -m "Test version"
-    )
-
-    run_test "Version sorting handles mixed versions correctly" \
-        "(cd \"$test_dir\" && \
-         latest_tag=\$(git tag -l \"v*\" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1) && \
-         echo \"Latest tag: \$latest_tag\" && \
-         [ \"\$latest_tag\" = \"v1.0.0\" ])" || ((failed_tests++))
-
-    # Clean tags for duplicate test
-    (cd "$test_dir" && git tag | xargs git tag -d >/dev/null 2>&1)
-
-    # Test duplicate tag prevention
-    run_test "Prevents duplicate tag creation" \
-        "(cd \"$test_dir\" && \
-         git tag -a v0.1.0 -m 'Test version' && \
-         ! git tag -a v0.1.0 -m 'Duplicate tag' 2>/dev/null)" || ((failed_tests++))
-
-    # Clean tags for invalid version test
-    (cd "$test_dir" && git tag | xargs git tag -d >/dev/null 2>&1)
-
-    # Test invalid version handling
-    run_test "Handles invalid version tags" \
-        "(cd \"$test_dir\" && \
-         git tag -a v1.0.0 -m 'Valid version' && \
-         git tag -a vinvalid -m 'Invalid version' && \
-         latest_tag=\$(git tag -l \"v*\" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | sort -V | tail -n1) && \
-         [ \"\$latest_tag\" = \"v1.0.0\" ])" || ((failed_tests++))
-
-    # Cleanup
-    rm -rf "$test_dir"
-
-    return "$failed_tests"
-}
-
-# Run all tests
-main() {
-    local failed_tests=0
-
-    # Check dependencies first
-    check_dependencies
-
-    log_header "Starting Tests"
-
-    # Test basic script loading
-    run_test "Script loads successfully" \
-        "bash -n ${PROJECT_ROOT}/setup.sh" || ((failed_tests++))
-
-    # Test configuration loading
-    run_test "Default config example exists and is valid YAML" \
-        "yq eval '.' \"${PROJECT_ROOT}/config/default.yml.example\" &>/dev/null" || ((failed_tests++))
-
-    # Test directory structure
-    run_test "Project directory structure is valid" \
-        "[[ -d ${PROJECT_ROOT}/lib/modules && -d ${PROJECT_ROOT}/config ]]" || ((failed_tests++))
-
-    # Test utilities
-    run_test "Utility functions load correctly" \
-        "source ${PROJECT_ROOT}/lib/utils.sh && command_exists ls" || ((failed_tests++))
-
-    # Test module loading
-    for module in xcode homebrew git ssh node macos cron; do
-        # First check if file exists
-        run_test "Module file $module exists" \
-            "[[ -f ${PROJECT_ROOT}/lib/modules/${module}.sh ]]" || ((failed_tests++))
-
-        # Then check if it can be parsed
-        run_test "Module $module loads correctly" \
-            "bash -n ${PROJECT_ROOT}/lib/modules/${module}.sh 2>&1" || ((failed_tests++))
-    done
-
-    # Test Homebrew installation check
-    if [[ -z "${CI}" ]]; then
-        run_test "Homebrew installation check works" \
-            "command -v brew &>/dev/null" || ((failed_tests++))
-    fi
-
-    # Test update checker
-    run_test "Update checker script exists" \
-        "[[ -f \"$PROJECT_ROOT/lib/check_update.sh\" ]]" || ((failed_tests++))
-
-    run_test "Update checker is executable" \
-        "bash \"$PROJECT_ROOT/lib/check_update.sh\"" || ((failed_tests++))
-
-    # Test configuration validation
-    run_test "Git configuration is valid" \
-        "yq e '.git.user.name' \"$PROJECT_ROOT/config/default.yml.example\" &>/dev/null && \
-         yq e '.git.user.email' \"$PROJECT_ROOT/config/default.yml.example\" &>/dev/null" || ((failed_tests++))
-
-    run_test "Node.js configuration is valid" \
-        "yq e '.node.versions' \"$PROJECT_ROOT/config/default.yml.example\" &>/dev/null && \
-         yq e '.node.default' \"$PROJECT_ROOT/config/default.yml.example\" &>/dev/null" || ((failed_tests++))
-
-    run_test "Homebrew configuration is valid" \
-        "yq e '.homebrew.formulas' \"$PROJECT_ROOT/config/default.yml.example\" &>/dev/null && \
-         yq e '.homebrew.casks' \"$PROJECT_ROOT/config/default.yml.example\" &>/dev/null" || ((failed_tests++))
-
-    # Test PR requirements
-    run_test "PR title format validation regex is valid" \
-        "echo 'feat: test title' | grep -E '^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+' &>/dev/null && \
-         echo 'fix(core): another test' | grep -E '^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+' &>/dev/null" || ((failed_tests++))
-
-    # Test file permissions and structure
-    run_test "Critical files are executable" \
-        "{ [[ -x \"$PROJECT_ROOT/setup.sh\" ]] || echo \"setup.sh is not executable\"; } && \
-         { [[ -x \"$PROJECT_ROOT/test/test.sh\" ]] || echo \"test/test.sh is not executable\"; }" || ((failed_tests++))
-
-    run_test "Module directory structure is correct" \
-        "[[ -d \"$PROJECT_ROOT/lib/modules\" ]] && \
-         [[ -f \"$PROJECT_ROOT/lib/utils.sh\" ]] && \
-         [[ -f \"$PROJECT_ROOT/lib/logging.sh\" ]]" || ((failed_tests++))
-
-    # Test secrets setup
-    run_test "Secrets example file exists" \
-        "[[ -f \"$PROJECT_ROOT/.secrets.example\" ]]" || ((failed_tests++))
-
-    run_test "Secrets example file has correct format" \
-        "grep -q '^GITHUB_TOKEN=' \"$PROJECT_ROOT/.secrets.example\" && \
-         grep -q '^GITHUB_TOKEN_ALT=' \"$PROJECT_ROOT/.secrets.example\"" || ((failed_tests++))
-
-    run_test "Secrets file is in gitignore" \
-        "grep -q '^\.secrets$' \"$PROJECT_ROOT/.gitignore\"" || ((failed_tests++))
-
-    # Run version handling tests
-    log_header "Running Version Handling Tests"
-    test_version_handling
-    failed_tests=$((failed_tests + $?))
-
-    # Print detailed summary
-    print_test_summary "$failed_tests"
-
-    if ((failed_tests > 0)); then
-        exit 1
-    else
-        log_success "All tests passed successfully"
-    fi
-}
-
-# Run main with error handling
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    trap 'echo "Error: Test script failed on line $LINENO"' ERR
-    main "$@"
+if ! is_compatible_yq_available=$(yq --version 2>&1) || [[ "$is_compatible_yq_available" != *mikefarah* ]]; then
+    echo "These tests need mikefarah/yq (brew install yq)" >&2
+    exit 1
 fi
+
+section "scripts"
+run_test "all scripts parse" test_syntax
+run_test "no bash 4+ syntax (macOS ships bash 3.2)" test_no_bash4_features
+run_test "entry scripts are committed as executable" test_executable_bits
+run_test "every module defines and is wired to its entry point" test_every_module_defines_its_entry_point
+run_test "shellcheck passes" test_shellcheck
+
+section "configuration"
+run_test "example config has the expected shape" test_example_config_shape
+run_test "default config is created from the example" test_config_created_from_example
+run_test "custom config path is used" test_custom_config_used
+run_test "missing custom config fails" test_missing_custom_config_fails
+run_test "gist URLs must use https" test_gist_requires_https
+
+finish_tests
