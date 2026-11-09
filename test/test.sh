@@ -29,7 +29,7 @@ $hits"
 
 test_executable_bits() {
     local file mode
-    for file in setup.sh install.sh lib/maintenance.sh test/run_tests.sh; do
+    for file in setup.sh install.sh lib/askpass.sh lib/maintenance.sh test/run_tests.sh scripts/release.sh; do
         mode=$(git -C "$PROJECT_ROOT" ls-files -s "$file" | awk '{print $1}')
         assert_eq "$mode" "100755" "git file mode of $file"
     done

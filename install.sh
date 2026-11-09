@@ -21,6 +21,7 @@ BIN_DIR="$HOME/.local/bin"
 # Minimal output helpers until the repo (and lib/logging.sh) is available
 print_info() { printf '  \033[0;34m➜\033[0m %s\n' "$1"; }
 print_error() { printf '  \033[0;31m✗ %s\033[0m\n' "$1" >&2; }
+print_warning() { printf '  \033[0;33m!\033[0m %s\n' "$1" >&2; }
 
 if [[ "$(uname)" != "Darwin" ]]; then
     print_error "zapz only works on macOS"
@@ -58,8 +59,12 @@ printf '\n  \033[1m⚡ Installing zapz\033[0m\n\n'
 # Install the latest release by default: a tested version, not whatever is
 # on the main branch today. ZAPZ_REF=main opts into the latest code.
 if [[ -z "$ZAPZ_REF" && -z "$ZAPZ_SOURCE" && "$ZAPZ_REPO" == "https://github.com/corbanb/zapz.git" ]]; then
-    ZAPZ_REF=$(curl -fsS --max-time 10 https://api.github.com/repos/corbanb/zapz/releases/latest 2>/dev/null \
+    ZAPZ_REF=$(curl -fsS --max-time 10 --retry 3 --retry-all-errors --retry-delay 2 \
+            https://api.github.com/repos/corbanb/zapz/releases/latest 2>/dev/null \
         | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n1) || ZAPZ_REF=""
+    if [[ -z "$ZAPZ_REF" ]]; then
+        print_warning "Couldn't look up the latest release on GitHub; installing the newest code from main instead"
+    fi
 fi
 
 # Fetch or update the code
@@ -109,6 +114,18 @@ source "$ZAPZ_HOME/lib/catalog.sh"
 # shellcheck source=lib/configure.sh
 source "$ZAPZ_HOME/lib/configure.sh"
 
+# Put the `zapz` command on PATH first, so a failed download below still
+# leaves a command to run again
+mkdir -p "$BIN_DIR"
+ln -sf "$ZAPZ_HOME/setup.sh" "$BIN_DIR/zapz"
+
+write_managed_block "$(shell_rc_file)" "cli" "case \":\$PATH:\" in
+    *\":\$HOME/.local/bin:\"*) ;;
+    *) export PATH=\"\$HOME/.local/bin:\$PATH\" ;;
+esac
+export ZAPZ_HOME=\"$ZAPZ_HOME\"
+[ -f \"\$ZAPZ_HOME/lib/check_update.sh\" ] && . \"\$ZAPZ_HOME/lib/check_update.sh\""
+
 ensure_yq
 log_success "zapz ${ZAPZ_VERSION} is in $(tilde_path "$ZAPZ_HOME")"
 
@@ -127,17 +144,6 @@ else
     write_default_config "$config"
     log_success "Created a recommended config: $(tilde_path "$config")"
 fi
-
-# Put the `zapz` command on PATH
-mkdir -p "$BIN_DIR"
-ln -sf "$ZAPZ_HOME/setup.sh" "$BIN_DIR/zapz"
-
-write_managed_block "$(shell_rc_file)" "cli" "case \":\$PATH:\" in
-    *\":\$HOME/.local/bin:\"*) ;;
-    *) export PATH=\"\$HOME/.local/bin:\$PATH\" ;;
-esac
-export ZAPZ_HOME=\"$ZAPZ_HOME\"
-[ -f \"\$ZAPZ_HOME/lib/check_update.sh\" ] && . \"\$ZAPZ_HOME/lib/check_update.sh\""
 
 if [[ "$asked" == true ]]; then
     printf "\n"

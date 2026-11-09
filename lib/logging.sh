@@ -189,43 +189,54 @@ _stop_spinner() {
 #
 # The command runs in the foreground, so Ctrl-C stops it (not just zapz)
 # and shell functions such as nvm keep their effects in this shell.
-# Usage: run_quiet [--housekeeping] [--soft <reason>] <label> <command> [args...]
+# Usage: run_quiet [--housekeeping] [--soft <reason>] [--watch] <label> <command> [args...]
 # --housekeeping: success isn't counted as a change in the summary
 # --soft <reason>: a failure is expected and fixable by the user, so it's
 #   shown as skipped with that reason instead of as a problem
+# --watch: for installers that might wait on a hidden dialog. Runs the
+#   command in the background (so not for shell functions that must change
+#   this shell) and watches its output: after ZAPZ_STALL_WARN_SECS (180)
+#   without new output it says what to check; after ZAPZ_STALL_STOP_SECS
+#   (900) it stops the command and reports it as failed (exit 124).
+#   Downloads keep writing progress, so slow ones don't count as stuck.
 run_quiet() {
-    local success_state=changed soft_reason=""
+    local success_state=changed soft_reason="" watch=false
     while [[ "$1" == --* ]]; do
         case "$1" in
             --housekeeping) success_state=housekeeping; shift ;;
             --soft) soft_reason="$2"; shift 2 ;;
+            --watch) watch=true; shift ;;
             *) break ;;
         esac
     done
     local label="$1"
     shift
-    local start=$SECONDS status=0
+    local start=$SECONDS status=0 stalled=false
     ensure_log_file
     printf '\n$ %s\n' "$*" >> "$ZAPZ_LOG"
     # Remember where this command's output starts, to show only it on failure
     local first_line
     first_line=$(($(wc -l < "$ZAPZ_LOG") + 1))
 
-    if [[ -t 1 ]]; then
-        _spinner "$label" "$start" &
-        ZAPZ_SPINNER_PID=$!
-        trap '_stop_spinner; printf "  Stopped.\n"; exit 130' INT TERM
+    _start_spinner "$label" "$start"
+    if [[ "$watch" == true ]]; then
+        "$@" < /dev/null >> "$ZAPZ_LOG" 2>&1 &
+        _watch_command $! "$label" "$start" || stalled=true
+        wait "$ZAPZ_WATCHED_PID" || status=$?
+        ZAPZ_WATCHED_PID=""
+        [[ "$stalled" == false ]] || status=124
+    else
+        "$@" < /dev/null >> "$ZAPZ_LOG" 2>&1 || status=$?
     fi
-    "$@" < /dev/null >> "$ZAPZ_LOG" 2>&1 || status=$?
-    if [[ -t 1 ]]; then
-        trap - INT TERM
-        _stop_spinner
-    fi
+    _end_spinner
 
     if ((status == 0)); then
         ui_item "$success_state" "$label" "$(_format_duration $((SECONDS - start)))"
     elif [[ -n "$soft_reason" ]]; then
         ui_item skipped "$label" "$soft_reason"
+    elif [[ "$stalled" == true ]]; then
+        ui_item failed "$label" "stopped: no progress for $(_format_duration "${ZAPZ_STALL_STOP_SECS:-900}")"
+        printf '      Try it yourself to see what it was waiting for: %s\n' "$*" >&2
     else
         ui_item failed "$label" "exit $status"
         # Last lines of this command's output, minus progress-bar noise
@@ -233,6 +244,56 @@ run_quiet() {
             | grep -v "^failed: $label" | tail -n 10 | sed "s/^/      /" >&2
     fi
     return "$status"
+}
+
+_start_spinner() {
+    [[ -t 1 ]] || return 0
+    _spinner "$1" "$2" &
+    ZAPZ_SPINNER_PID=$!
+    trap '_stop_spinner; [[ -z "${ZAPZ_WATCHED_PID:-}" ]] || kill "$ZAPZ_WATCHED_PID" 2>/dev/null; printf "  Stopped.\n"; exit 130' INT TERM
+}
+
+_end_spinner() {
+    [[ -t 1 ]] || return 0
+    trap - INT TERM
+    _stop_spinner
+}
+
+# Wait for background command $1 while its output keeps growing. Warns once
+# when it goes quiet; stops it and returns 1 if it stays quiet too long.
+_watch_command() {
+    local pid="$1" label="$2" start="$3"
+    local warn_after="${ZAPZ_STALL_WARN_SECS:-180}" stop_after="${ZAPZ_STALL_STOP_SECS:-900}"
+    local size last_size=-1 last_change=$SECONDS warned=false i
+    ZAPZ_WATCHED_PID="$pid"
+    while kill -0 "$pid" 2>/dev/null; do
+        size=$(wc -c < "$ZAPZ_LOG")
+        if [[ "$size" != "$last_size" ]]; then
+            last_size="$size"
+            last_change=$SECONDS
+        elif ((SECONDS - last_change >= stop_after)); then
+            kill "$pid" 2>/dev/null
+            # Give it a moment to clean up, then insist
+            for i in 1 2 3 4 5 6 7 8 9 10; do
+                kill -0 "$pid" 2>/dev/null || break
+                sleep 1
+            done
+            kill -9 "$pid" 2>/dev/null
+            _log_to_file "stopped: $label (no output for ${stop_after}s)"
+            return 1
+        elif [[ "$warned" == false ]] && ((SECONDS - last_change >= warn_after)); then
+            warned=true
+            _end_spinner
+            printf "  ${YELLOW}!${NC} %s has shown no progress for %s. It may be waiting for you:\n" \
+                "$label" "$(_format_duration "$warn_after")"
+            printf "      check for a password or permission dialog (it can hide behind other\n"
+            printf "      windows) and System Settings > Privacy & Security. zapz keeps waiting.\n"
+            _log_to_file "warning: $label has shown no progress for ${warn_after}s"
+            _start_spinner "$label" "$start"
+        fi
+        sleep 0.2
+    done
+    return 0
 }
 
 # Banner-free closing summary with counts, problems and next steps
